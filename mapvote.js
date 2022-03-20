@@ -142,6 +142,7 @@ export default class MapVote extends BasePlugin
     
     async onPlayerDisconnected()
     {
+        if (!this.votingEnabled) return;
 		await this.server.updatePlayerList();
         this.clearVote();
         this.updateNextMap();
