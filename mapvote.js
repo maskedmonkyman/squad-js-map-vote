@@ -239,22 +239,24 @@ export default class MapVote extends BasePlugin
     //TODO: right now if version is set to "Any" no caf layers will be selected
     populateNominations() //gets nomination strings from layer options
     {
+        //helpers
+        const splitName = name => name.substring(0, name.lastIndexOf("_"));
+        const removeCAF = name => name.replace("CAF_", "");
+        const matchLayers = builtString => Layers.layers.filter((element) => element.layerid.startsWith(builtString));
+
 		if (!this.server.currentLayer)
 		{
 			this.verbose(1, "Error: unknown currentLayer");
 			endVoting();
 			return;
 		}
-        const splitName = name => name.substring(0, name.lastIndexOf("_"));
-        const removeCAF = name => name.replace("CAF_", "");
 
         this.nominations = [];
         const rulesList = this.voteRules.rules;
         let layerString = this.server.currentLayer.layerid;
         let nominationsList = rulesList.default;
-
-        const matchLayers = builtString => Layers.layers.filter((element) => element.layerid.startsWith(builtString));
 		
+        //chomp string until we find a match
         while(layerString.length > 0)
         {
             if(layerString in rulesList)
