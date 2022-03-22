@@ -1,0 +1,1 @@
+map vote plugin for squad js
