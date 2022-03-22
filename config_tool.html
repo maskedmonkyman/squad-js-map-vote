@@ -168,6 +168,39 @@
 		const modes_list = document.getElementById("modes_list");
 		let selected_mode = null;
 
+		function build_vote_rules()
+		{
+			let vote_rules = {
+				"modes": [],
+				"rules": {},
+				"addon_map_layer_strings": []
+			};
+
+			for(let mode of modes_list.children)
+			{
+				vote_rules.modes.push(mode.innerHTML.trim());
+			}
+
+			for(let rule_element of rules_list.children)
+			{
+				let rule = {
+					"name": rule_element.rule_string_input.value,
+					"nominations": []
+				};
+				for (let nomination of rule_element.nomination_list.children)
+				{
+					rule.nominations.push({
+						"map": nomination.map_input.value.trim(),
+						"modes": nomination.mode_input.value.trim().split(',').map(e => e.trim()), 
+						"versions": nomination.verison_input.value.trim().split(',').map(e => e.trim())
+					});
+				}
+				vote_rules.rules[rule.name] = rule.nominations;
+			}
+
+			return vote_rules;
+		}
+
 		add_rule_button.onclick = ()=>{
 			let rule = build_rule_element();
 			rules_list.appendChild(rule);
@@ -203,33 +236,7 @@
 		};
 
 		save_button.onclick = () => {
-			let vote_rules = {
-				"modes": [],
-				"rules": {},
-				"addon_map_layer_strings": []
-			};
-
-			for(let mode of modes_list.children)
-			{
-				vote_rules.modes.push(mode.innerHTML.trim());
-			}
-
-			for(let rule_element of rules_list.children)
-			{
-				let rule = {
-					"name": rule_element.rule_string_input.value,
-					"nominations": []
-				};
-				for (let nomination of rule_element.nomination_list.children)
-				{
-					rule.nominations.push({
-						"map": nomination.map_input.value.trim(),
-						"modes": nomination.mode_input.value.trim().split(',').map(e => e.trim()), 
-						"versions": nomination.verison_input.value.trim().split(',').map(e => e.trim())
-					});
-				}
-				vote_rules.rules[rule.name] = rule.nominations;
-			}
+			let vote_rules = build_vote_rules();
 			var a = document.createElement("a");
 			a.href = window.URL.createObjectURL(new Blob([JSON.stringify(vote_rules)], {type: "text/plain"}));
 			a.download = "vote_rules.json";
