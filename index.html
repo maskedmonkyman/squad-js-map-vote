@@ -131,9 +131,12 @@
 			</div>
 		</div>
 		<div id="info">
+			<button onclick="render_graph()">render graph</button>
+			<div class="pannel" style="width: 95%;">
+				<div id="graph_container" class="graph_container"></div>
+			</div>
 			<h3>info:</h3>
 			tool by maskedmonkyman <br>
-			version 1.0 <br>
 			<h4>warning:</h4>
 			<p>
 				this tool is a thin wrapper around
@@ -152,12 +155,17 @@
 					the Any option for modes, will select modes from the
 					mode strings section so be sure to fill it out.
 				</li>
+				<li>
+					The plugin looks for maps from specific to general so if the
+					current layer is Yehorivka_RAAS_v1 then the plugin will look for rules: <br>
+					Yehorivka_RAAS_v1 <br>
+					Yehorivka_RAAS <br>
+					Yehorivka <br>
+					defualt <br>
+					then load from the first one it finds
+				</li>
 			</ol>
 			</p>
-			<button onclick="render_graph()">render graph</button>
-			<div class="pannel" style="width: 95%;">
-				<div id="graph_container" class="graph_container"></div>
-			</div>
 		</div>
 	</div>
 	<script src="/config_tool/viz.js"></script>
