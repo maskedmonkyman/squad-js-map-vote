@@ -95,6 +95,11 @@
 		{
 			width: 30ch;
 		}
+
+		.graph_container
+		{
+			overflow: hidden;
+		}
 	</style>
 </head>
 <body>
@@ -149,8 +154,15 @@
 				</li>
 			</ol>
 			</p>
+			<button onclick="render_graph()">render graph</button>
+			<div class="pannel" style="width: 95%;">
+				<div id="graph_container" class="graph_container"></div>
+			</div>
 		</div>
 	</div>
+	<script src="./config_scripts/viz.js"></script>
+	<script src="./config_scripts/full.render.js"></script>
+	<script src="./config_scripts/svg-pan-zoom.min.js" type="text/javascript" charset="utf-8"></script>
 	<script>
 		"use strict";
 		//TODO addon layers
@@ -167,6 +179,77 @@
 		const mode_input = document.getElementById("mode_input");
 		const modes_list = document.getElementById("modes_list");
 		let selected_mode = null;
+
+		let svg_element = null;
+
+		function fetch_layer_strings()
+		{
+			const wiki_url = "https://raw.githubusercontent.com/Squad-Wiki-Editorial/squad-wiki-pipeline-map-data/master/completed_output/_Current%20Version/finished.json";
+			let layer_strings = [];
+
+			fetch(wiki_url).then(response=>response.json()).then(function(response){
+				for(const layer of response.Maps)
+					layer_strings.push(layer.rawName);
+			});
+
+			return layer_strings;
+		}
+
+		function render_graph()
+		{
+			const graph = build_graph_string(build_vote_rules());
+			//let layer_strings = fetch_layer_strings();
+			var viz = new Viz();
+			
+			if (svg_element)
+				svg_element.parentNode.removeChild(svg_element);
+
+			viz.renderSVGElement(graph, {"engine" : "circo"})
+			.then(function(element) {
+				svg_element = element;
+				
+				//set svg to the size of it's container
+				svg_element.setAttribute("width", "100%");
+				//remove height initially to auto scale
+				svg_element.removeAttribute("height");
+
+				document.getElementById("graph_container").appendChild(svg_element);
+				let panZoom = svgPanZoom(svg_element, {
+					zoomEnabled: true,
+          			controlIconsEnabled: true,
+          			fit: false,
+          			center: true
+				});
+				
+				//hacky work around for pan zoom so it scale properly
+				svg_element.setAttribute("height", `${panZoom.getSizes().height}px`)
+			})
+			.catch(error => {
+				// Create a new Viz instance (@see Caveats page for more info)
+				viz = new Viz();
+
+				// Possibly display the error
+				console.error(error);
+			});		
+		}
+
+		function build_graph_string(vote_rules)
+		{
+			let graph = "digraph G \n";
+			graph += "\{";
+			let rules = vote_rules.rules;
+			for(const rule in rules)
+			{
+				const nomination = rules[rule];
+				
+				for (const layer of nomination)
+				{
+					graph += `${rule} -> ${layer.map}\n`;
+				}
+			}
+			graph += "\}";
+			return graph;
+		}
 
 		function build_vote_rules()
 		{
