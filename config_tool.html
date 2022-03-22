@@ -328,6 +328,8 @@
 
 		load_button.onchange = () => {
 			let reader = new FileReader();
+			rules_list.innerHTML = "";
+			modes_list.innerHTML = "";
 			reader.addEventListener("load", (event) => {
 				let vote_rules = JSON.parse(event.target.result);
 				for (let mode of vote_rules.modes)
