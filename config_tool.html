@@ -332,9 +332,13 @@
 			modes_list.innerHTML = "";
 			reader.addEventListener("load", (event) => {
 				let vote_rules = JSON.parse(event.target.result);
+
 				for (let mode of vote_rules.modes)
 					add_mode(mode);
-				for (let rule in vote_rules.rules)
+
+				let rules = Object.keys(vote_rules.rules).sort()
+
+				for (let rule of rules)
 				{
 					let rule_element = build_rule_element();
 					rule_element.rule_string_input.value = rule;
