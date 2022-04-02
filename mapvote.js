@@ -324,6 +324,10 @@ export default class MapVote extends BasePlugin
     {
         const playerCount = this.server.players.length;
         const minPlayers = this.options.minPlayersForVote;
+
+        if (this.votingEnabled) //voting has already started
+            return;
+
         if (playerCount < minPlayers && !force)
         {
             if (this.onConnectBound == false)
@@ -333,11 +337,12 @@ export default class MapVote extends BasePlugin
             }
             return;
         }
-        if(this.onConnectBound)
+        if (this.onConnectBound)
         {
             this.server.removeEventListener("PLAYER_CONNECTED", this.beginVoting);
             this.onConnectBound = false;
         }
+
         // these need to be reset after reenabling voting
         this.trackedVotes = {};
         this.tallies = [];
