@@ -64,7 +64,7 @@ export default class MapVote extends BasePlugin
                 required: false,
                 description: 'broadcast interval for vote notification in mils',
                 default: 15
-            },
+            }
         };
     }
     
@@ -236,13 +236,40 @@ export default class MapVote extends BasePlugin
         this.server.rcon.execute(`AdminSetNextLayer ${nextMap}`);
     }
     
+    matchLayers(builtString) 
+    {
+        return Layers.layers.filter(element => element.layerid.startsWith(builtString));
+    }
+
+    getMode(modes, currentMode)
+    {
+        let mode = modes[0];
+
+        if (mode === "Any")
+            modes = this.voteRules.modes;
+
+        if (this.voteRules.repeatBlacklist.includes(currentMode))
+        {
+            modes = modes.filter(mode => !mode.includes(currentMode));
+        }
+
+        while (modes.length > 0)
+        {
+            mode = randomElement(this.modes);
+            modes = modes.filter(elem => elem !== mode);
+            if (matchLayers(`${cafPrefix}${mapName}_${mode}`).length > 0)
+                break;
+        }
+
+        return mode;
+    }
+
     //TODO: right now if version is set to "Any" no caf layers will be selected
     populateNominations() //gets nomination strings from layer options
     {
         //helpers
         const splitName = name => name.substring(0, name.lastIndexOf("_"));
         const removeCAF = name => name.replace("CAF_", "");
-        const matchLayers = builtString => Layers.layers.filter((element) => element.layerid.startsWith(builtString));
 
 		if (!this.server.currentLayer)
 		{
@@ -255,7 +282,7 @@ export default class MapVote extends BasePlugin
         const rulesList = this.voteRules.rules;
         let layerString = this.server.currentLayer.layerid;
         let nominationsList = rulesList.default;
-		
+        
         //chomp string until we find a match
         while(layerString.length > 0)
         {
@@ -267,11 +294,11 @@ export default class MapVote extends BasePlugin
             layerString = removeCAF(layerString);
             layerString = splitName(layerString);
         }
-        
+
         for(const nomination of nominationsList)
         {
             const mapName = nomination.map;
-            let mode = randomElement(nomination.modes);
+            let mode = getMode(nomination.modes, this.server.currentLayer.gamemode);
             let version = randomElement(nomination.versions);
             let cafPrefix = "";
 
@@ -279,18 +306,6 @@ export default class MapVote extends BasePlugin
             {
                 cafPrefix = "CAF_";
                 version = removeCAF(version);
-            }
-
-            if (mode === "Any")
-            {
-                let modes = this.voteRules.modes;
-                while (modes.length > 0)
-                {
-                    mode = randomElement(this.voteRules.modes);
-                    modes = modes.filter((elem) => elem !== mode);
-                    if (matchLayers(`${cafPrefix}${mapName}_${mode}`).length > 0)
-                        break;
-                }
             }
             
             let builtLayerString = `${cafPrefix}${mapName}_${mode}_${version}`;
