@@ -204,7 +204,7 @@ export default class MapVote extends BasePlugin
                 
                 if(!this.votingEnabled)
                 {
-                    await this.msgDirect(steamID, "Voting is already disabled");
+                    await this.msgDirect(steamID, "Voting is already disabled, emotional damage!");
                     return;
                 }
                 this.endVoting();
@@ -238,11 +238,13 @@ export default class MapVote extends BasePlugin
     
     matchLayers(builtString) 
     {
-        return Layers.layers.filter(element => element.layerid.startsWith(builtString));
+        return Layers.layers.filter(element => element.layerid.includes(builtString));
     }
 
-    getMode(modes, currentMode)
+    getMode(nomination, currentMode)
     {
+        const mapName = nomination.map;
+        let modes = nomination.modes;
         let mode = modes[0];
 
         if (mode === "Any")
@@ -257,7 +259,7 @@ export default class MapVote extends BasePlugin
         {
             mode = randomElement(this.modes);
             modes = modes.filter(elem => elem !== mode);
-            if (matchLayers(`${cafPrefix}${mapName}_${mode}`).length > 0)
+            if (matchLayers(`${mapName}_${mode}`).length > 0)
                 break;
         }
 
@@ -311,18 +313,16 @@ export default class MapVote extends BasePlugin
             let builtLayerString = `${cafPrefix}${mapName}_${mode}_${version}`;
             if (version === "Any")
             {
-                let versions = matchLayers(`${cafPrefix}${mapName}_${mode}`);
-                if (versions.length == 0)
+                let maps = matchLayers(`${mapName}_${mode}`);
+                if (maps.length == 0)
                 {
                     this.verbose(1, `error: could not find layer for ${builtLayerString} from vote rule \"${layerString}\"`);
                     continue;
                 }
-                versions = versions.map(l => l.layerid);
-                version = randomElement(versions);
-				version = version.substring(version.lastIndexOf("_") + 1, version.length);
-                builtLayerString = `${cafPrefix}${mapName}_${mode}_${version}`;
+                maps = maps.map(l => l.layerid);
+                builtLayerString = randomElement(maps);
             }
-
+            
             if (!Layers.getLayerByCondition((layer) => layer.layerid === builtLayerString))
             {
                 this.verbose(1, `error: could not find layer for ${builtLayerString} from vote rule \"${layerString}\"`);
