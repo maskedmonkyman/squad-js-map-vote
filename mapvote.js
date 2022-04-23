@@ -250,7 +250,7 @@ export default class MapVote extends BasePlugin
         if (mode === "Any")
             modes = this.voteRules.modes;
 
-        if (this.voteRules.repeatBlacklist.includes(currentMode))
+        if (this.voteRules.mode_repeat_blacklist.includes(currentMode))
         {
             modes = modes.filter(mode => !mode.includes(currentMode));
         }

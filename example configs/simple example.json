@@ -6,6 +6,11 @@
         "Invasion"
     ],
 
+    "mode_repeat_blacklist":
+    [
+        "Invasion"
+    ],
+
     "rules": 
     {
         "Gorodok":
