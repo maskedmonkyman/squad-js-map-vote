@@ -272,17 +272,13 @@ export default class MapVote extends BasePlugin
         //helpers
         const splitName = name => name.substring(0, name.lastIndexOf("_"));
         const removeCAF = name => name.replace("CAF_", "");
-
-		if (!this.server.currentLayer)
-		{
-			this.verbose(1, "Error: unknown currentLayer");
-			endVoting();
-			return;
-		}
+        
+        let layerString = "";
+		if (this.server.currentLayer)
+            layerString = this.server.currentLayer.layerid
 
         this.nominations = [];
         const rulesList = this.voteRules.rules;
-        let layerString = this.server.currentLayer.layerid;
         let nominationsList = rulesList.default;
         
         //chomp string until we find a match
