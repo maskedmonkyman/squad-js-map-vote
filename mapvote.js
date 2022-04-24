@@ -257,9 +257,9 @@ export default class MapVote extends BasePlugin
 
         while (modes.length > 0)
         {
-            mode = randomElement(this.modes);
+            mode = randomElement(modes);
             modes = modes.filter(elem => elem !== mode);
-            if (matchLayers(`${mapName}_${mode}`).length > 0)
+            if (this.matchLayers(`${mapName}_${mode}`).length > 0)
                 break;
         }
 
@@ -274,8 +274,12 @@ export default class MapVote extends BasePlugin
         const removeCAF = name => name.replace("CAF_", "");
         
         let layerString = "";
+        let currentMode = "";
 		if (this.server.currentLayer)
+        {
             layerString = this.server.currentLayer.layerid
+            currentMode = this.server.currentLayer.gamemode
+        }
 
         this.nominations = [];
         const rulesList = this.voteRules.rules;
@@ -296,7 +300,7 @@ export default class MapVote extends BasePlugin
         for(const nomination of nominationsList)
         {
             const mapName = nomination.map;
-            let mode = getMode(nomination.modes, this.server.currentLayer.gamemode);
+            let mode = this.getMode(nomination, currentMode);
             let version = randomElement(nomination.versions);
             let cafPrefix = "";
 
@@ -309,7 +313,7 @@ export default class MapVote extends BasePlugin
             let builtLayerString = `${cafPrefix}${mapName}_${mode}_${version}`;
             if (version === "Any")
             {
-                let maps = matchLayers(`${mapName}_${mode}`);
+                let maps = this.matchLayers(`${mapName}_${mode}`);
                 if (maps.length == 0)
                 {
                     this.verbose(1, `error: could not find layer for ${builtLayerString} from vote rule \"${layerString}\"`);
