@@ -129,6 +129,13 @@
 				<button>add</button>
 				<button>remove</button>
 			</div>
+			<div id="blacklist">
+				<h3>mode repeat blacklist strings (case sensitive):</h3>
+				<ul id="blacklist_list" class="border_list"></ul>
+				<input type="text" id="blacklist_input">
+				<button id="add_blacklist">add</button>
+				<button id="remove_blacklist">remove</button>
+			</div>
 		</div>
 		<div id="info">
 			<button onclick="render_graph()">render graph</button>
@@ -186,8 +193,14 @@
 		const remove_mode_button = document.getElementById("remove_mode");
 		const mode_input = document.getElementById("mode_input");
 		const modes_list = document.getElementById("modes_list");
-		let selected_mode = null;
+		//blacklist
+		const add_blacklist_button = document.getElementById("add_blacklist");
+		const remove_blacklist_button = document.getElementById("remove_blacklist");
+		const blacklist_input = document.getElementById("blacklist_input");
+		const blacklist_list = document.getElementById("blacklist_list");
 
+		let selected_mode = null;
+		let selected_blacklist_item = null;
 		let svg_element = null;
 
 		function fetch_layer_strings()
@@ -264,15 +277,21 @@
 			let vote_rules = {
 				"modes": [],
 				"rules": {},
-				"addon_map_layer_strings": []
+				"addon_map_layer_strings": [],
+				"mode_repeat_blacklist": []
 			};
 
-			for(let mode of modes_list.children)
+			for (let mode of modes_list.children)
 			{
 				vote_rules.modes.push(mode.innerHTML.trim());
 			}
 
-			for(let rule_element of rules_list.children)
+			for (let blacklist_item of blacklist_list.children)
+			{
+				vote_rules.mode_repeat_blacklist.push(blacklist_item.innerHTML.trim());
+			}
+
+			for (let rule_element of rules_list.children)
 			{
 				let rule = {
 					"name": rule_element.rule_string_input.value,
@@ -291,6 +310,12 @@
 
 			return vote_rules;
 		}
+
+		add_blacklist_button.onclick = ()=>{
+			if (blacklist_input.value == "")
+				return;
+			add_blacklist_item(blacklist_input.value);
+		};
 
 		add_rule_button.onclick = ()=>{
 			let rule = build_rule_element();
@@ -318,6 +343,29 @@
 			};
 		}
 
+		function add_blacklist_item(blacklist_string)
+		{
+			let blacklist_item = document.createElement("li");
+			blacklist_item.innerHTML = blacklist_string;
+			blacklist_list.appendChild(blacklist_item);
+			blacklist_item.onclick = () => {
+				if (selected_blacklist_item)
+				{
+					selected_blacklist_item.classList.remove("selected");
+				}
+				selected_blacklist_item = blacklist_item;
+				selected_blacklist_item.classList.add("selected");
+			};
+		}
+
+		remove_blacklist_button.onclick = () => {
+			if (selected_blacklist_item)
+			{
+				selected_blacklist_item.parentNode.removeChild(selected_blacklist_item);
+				selected_blacklist_item = null;
+			}
+		};
+
 		remove_mode_button.onclick = () => {
 			if (selected_mode)
 			{
@@ -343,6 +391,9 @@
 
 				for (let mode of vote_rules.modes)
 					add_mode(mode);
+
+				for (let blacklist_item of vote_rules.mode_repeat_blacklist)
+					add_blacklist_item(blacklist_item);
 
 				let rules = Object.keys(vote_rules.rules).sort();
 
