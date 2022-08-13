@@ -5,35 +5,29 @@ import BasePlugin from "./base-plugin.js";
 import fs from "fs";
 import { Layers } from "../layers/index.js"
 
-function randomElement(array)
-{
-	return array[Math.floor(Math.random() * array.length)];
+function randomElement(array) {
+    return array[ Math.floor(Math.random() * array.length) ];
 }
 
-function formatChoice(choiceIndex, mapString, currentVotes)
-{
-	return `type !vote ${choiceIndex + 1} : ${mapString} (${currentVotes} votes)`
+function formatChoice(choiceIndex, mapString, currentVotes, firstBroadcast) {
+    return `${choiceIndex + 1}➤ ${mapString} ` + (!firstBroadcast ? `(${currentVotes})` : "");
+    // return `${choiceIndex + 1}❱ ${mapString} (${currentVotes} votes)`
 }
 
-function toMils(min)
-{
-	return min * 60 * 1000;
+function toMils(min) {
+    return min * 60 * 1000;
 }
 
-export default class MapVote extends BasePlugin
-{
-    static get description() 
-    {
+export default class MapVote extends BasePlugin {
+    static get description() {
         return "Map Voting plugin";
     }
-    
-    static get defaultEnabled() 
-    {
+
+    static get defaultEnabled() {
         return true;
     }
-    
-    static get optionsSpecification() 
-    {
+
+    static get optionsSpecification() {
         return {
             commandPrefix:
             {
@@ -47,7 +41,7 @@ export default class MapVote extends BasePlugin
                 description: 'the path to the layersConfig file',
                 default: ''
             },
-			minPlayersForVote:
+            minPlayersForVote:
             {
                 required: false,
                 description: 'number of players needed on the server for a vote to start',
@@ -67,101 +61,96 @@ export default class MapVote extends BasePlugin
             }
         };
     }
-    
-    constructor(server, options, connectors)
-    {
+
+    constructor(server, options, connectors) {
         super(server, options, connectors);
-		
+
         this.voteRules = {}; //data object holding vote configs
         this.nominations = []; //layer strings for the current vote choices
-		this.trackedVotes = {}; //player votes, keyed by steam id
+        this.trackedVotes = {}; //player votes, keyed by steam id
         this.tallies = []; //votes per layer, parellel with nominations
         this.votingEnabled = false;
         this.onConnectBound = false;
         this.broadcastIntervalTask = null;
-        
+        this.firstBroadcast = true;
+
         this.onNewGame = this.onNewGame.bind(this);
         this.onPlayerDisconnected = this.onPlayerDisconnected.bind(this);
         this.onChatMessage = this.onChatMessage.bind(this);
-		this.broadcastNominations = this.broadcastNominations.bind(this);
+        this.broadcastNominations = this.broadcastNominations.bind(this);
         this.beginVoting = this.beginVoting.bind(this);
 
-        this.msgBroadcast = (msg) => {this.server.rcon.broadcast(msg);};
-        this.msgDirect = (steamid, msg) => {this.server.rcon.warn(steamid, msg);};
+        this.msgBroadcast = (msg) => { this.server.rcon.broadcast(msg); };
+        this.msgDirect = (steamid, msg) => { this.server.rcon.warn(steamid, msg); };
 
         //load voteRules with options from source file
         this.loadLayersConfig();
     }
 
-    async mount()
-    {
-		this.server.on('NEW_GAME', this.onNewGame);
+    async mount() {
+        this.server.on('NEW_GAME', this.onNewGame);
         this.server.on('CHAT_MESSAGE', this.onChatMessage);
         this.server.on('PLAYER_DISCONNECTED', this.onPlayerDisconnected);
-		this.verbose(1, 'Map vote was mounted.');
+        this.verbose(1, 'Map vote was mounted.');
     }
 
-    async unmount()
-    {
-		this.server.removeEventListener('NEW_GAME', this.onNewGame);
+    async unmount() {
+        this.server.removeEventListener('NEW_GAME', this.onNewGame);
         this.server.removeEventListener('CHAT_MESSAGE', this.onChatMessage);
         this.server.removeEventListener('PLAYER_DISCONNECTED', this.onPlayerDisconnected);
         clearInterval(this.broadcastIntervalTask);
-		this.verbose(1, 'Map vote was un-mounted.');
+        this.verbose(1, 'Map vote was un-mounted.');
     }
-    
+
     //loads layer configs from disk into plugin memory
-    loadLayersConfig()
-    {
+    loadLayersConfig() {
         this.verbose(1, `Fetching Map Voting Lists...`);
-        
+
         let layersConfigString = '';
-        try 
-        {
-            if (!fs.existsSync(this.options.voteRulesPath)) 
+        try {
+            if (!fs.existsSync(this.options.voteRulesPath))
                 throw new Error(`Could not find Map Vote List at ${this.options.voteRulesPath}`);
             layersConfigString = fs.readFileSync(this.options.voteRulesPath, 'utf8');
         }
-        catch (error) 
-        {
+        catch (error) {
             this.verbose('SquadServer', 1, `Error fetching mapvoting list: ${options.voteRulesPath}`, error);
         }
 
         this.voteRules = JSON.parse(layersConfigString);
     }
-    
-    async onNewGame()
-	{
+
+    async onNewGame() {
         //wait to start voting
         this.endVoting();
         this.trackedVotes = {};
         this.tallies = [];
         this.nominations = [];
+        this.factionStrings = [];
         setTimeout(this.beginVoting, toMils(this.options.voteWaitTimeFromMatchStart));
-	}
-    
-    async onPlayerDisconnected()
-    {
+    }
+
+    async onPlayerDisconnected() {
         if (!this.votingEnabled) return;
-		await this.server.updatePlayerList();
+        await this.server.updatePlayerList();
         this.clearVote();
         this.updateNextMap();
     }
 
-    async onChatMessage(info)
-    {
-        const {steamID, name: playerName} = info;
+    async onChatMessage(info) {
+        const { steamID, name: playerName } = info;
         const message = info.message.toLowerCase();
         //check to see if this message has a command prefix
-        if (!message.startsWith(this.options.commandPrefix))
+        if (!message.startsWith(this.options.commandPrefix) && isNaN(message))
             return;
-        
-        const subCommand = message.substring(this.options.commandPrefix.length).trim();
-        if(!isNaN(subCommand)) // if this succeeds player is voting for a map
+
+        const commandSplit = (isNaN(message) ? message.substring(this.options.commandPrefix.length).trim().split(' ') : [ message ]);
+        let cmdLayers = commandSplit.slice(1);
+        for (let k in cmdLayers) cmdLayers[ k ] = cmdLayers[ k ].toLowerCase();
+        const subCommand = commandSplit[ 0 ];
+        if (!isNaN(subCommand)) // if this succeeds player is voting for a map
         {
-			const mapNumber = parseInt(subCommand); //try to get a vote number
-            if (!this.votingEnabled)
-            {
+            const mapNumber = parseInt(subCommand); //try to get a vote number
+            if (!this.votingEnabled) {
                 await this.msgDirect(steamID, "There is no vote running right now");
                 return;
             }
@@ -169,94 +158,93 @@ export default class MapVote extends BasePlugin
             this.updateNextMap();
             return;
         }
-        
+
         const isAdmin = info.chat === "ChatAdmin";
-        switch(subCommand) // select the sub command
+        switch (subCommand) // select the sub command
         {
             case "choices": //sends choices to player in the from of a warning
-                if (!this.votingEnabled)
-                {
+                if (!this.votingEnabled) {
                     await this.msgDirect(steamID, "There is no vote running right now");
                     return;
                 }
                 this.directMsgNominations(steamID);
                 return;
             case "results": //sends player the results in a warning
-                if (!this.votingEnabled)
-                {
+                if (!this.votingEnabled) {
                     await this.msgDirect(steamID, "There is no vote running right now");
                     return;
                 }
                 this.directMsgNominations(steamID);
                 return;
-            case "restart": //starts the vote again if it was canceled
-                if(!isAdmin) return;
-                
-                if(this.votingEnabled)
-                {
+            case "start": //starts the vote again if it was canceled
+                if (!isAdmin) return;
+
+                if (this.votingEnabled) {
                     await this.msgDirect(steamID, "Voting is already enabled");
                     return;
                 }
-                this.beginVoting(true);
+                this.beginVoting(true, steamID, cmdLayers);
+                return;
+            case "restart": //starts the vote again if it was canceled
+                if (!isAdmin) return;
+                this.endVoting();
+                this.beginVoting(true, steamID, cmdLayers);
                 return;
             case "cancel": //cancels the current vote and wont set next map to current winnner
-                if(!isAdmin) return;
-                
-                if(!this.votingEnabled)
-                {
-                    await this.msgDirect(steamID, "Voting is already disabled, emotional damage!");
+                if (!isAdmin) return;
+
+                if (!this.votingEnabled) {
+                    await this.msgDirect(steamID, "There is no vote running right now");
                     return;
                 }
                 this.endVoting();
-				await this.msgDirect(steamID, "ending current vote");
+                await this.msgDirect(steamID, "Ending current vote");
                 return;
-            case "reload": //allows for config hot reloads
-                if(!isAdmin) return;
-                
-                this.loadLayersConfig();
-                await this.msgDirect(steamID, "Reloaded map vote layers configuration")
+            case "broadcast":
+                if (!this.votingEnabled) {
+                    await this.msgDirect(steamID, "There is no vote running right now");
+                    return;
+                }
+                this.broadcastNominations();
                 return;
             case "help": //displays available commands
+                await this.msgDirect(steamID, `Map voting system built by JetDave for MAD`);
                 await this.msgDirect(steamID, `!vote <choices|number|results>`);
-                if(!isAdmin) return;
-                
-                await this.msgDirect(steamID, `!vote <restart|cancel|reload> (admin only)`);
+                if (!isAdmin) return;
+
+                await this.msgDirect(steamID, `!vote <start|restart|cancel|broadcast> (admin only)`);
                 return;
             default:
                 //give them an error
                 await this.msgDirect(steamID, `Unknown vote subcommand: ${subCommand}`);
                 return;
         }
-        
+
     }
-    
+
     updateNextMap() //sets next map to current mapvote winner, if there is a tie will pick at random
     {
         const nextMap = randomElement(this.currentWinners);
         this.server.rcon.execute(`AdminSetNextLayer ${nextMap}`);
     }
-    
-    matchLayers(builtString) 
-    {
+
+    matchLayers(builtString) {
         return Layers.layers.filter(element => element.layerid.includes(builtString));
     }
 
-    getMode(nomination, currentMode)
-    {
+    getMode(nomination, currentMode) {
         const mapName = nomination.map;
         let modes = nomination.modes;
-        let mode = modes[0];
+        let mode = modes[ 0 ];
 
         if (mode === "Any")
             modes = this.voteRules.modes;
 
-        if (this.voteRules.mode_repeat_blacklist.includes(currentMode))
-        {
+        if (this.voteRules.mode_repeat_blacklist.includes(currentMode)) {
             modes = modes.filter(mode => !mode.includes(currentMode));
         }
 
-        while (modes.length > 0)
-        {
+        while (modes.length > 0) {
             mode = randomElement(modes);
             modes = modes.filter(elem => elem !== mode);
             if (this.matchLayers(`${mapName}_${mode}`).length > 0)
@@ -267,93 +255,80 @@ export default class MapVote extends BasePlugin
     }
 
     //TODO: right now if version is set to "Any" no caf layers will be selected
-    populateNominations() //gets nomination strings from layer options
+    populateNominations(steamid = null, cmdLayers = null, bypassRaasFilter = false) //gets nomination strings from layer options
     {
-        //helpers
-        const splitName = name => name.substring(0, name.lastIndexOf("_"));
-        const removeCAF = name => name.replace("CAF_", "");
-        
-        let layerString = "";
-        let currentMode = "";
-		if (this.server.currentLayer)
-        {
-            layerString = this.server.currentLayer.layerid
-            currentMode = this.server.currentLayer.gamemode
+        // this.nominations.push(builtLayerString);
+        // this.tallies.push(0);
+
+        const translations = {
+            'United States Army': "USA",
+            'United States Marine Corps': "USMC",
+            'Russian Ground Forces': "RUS",
+            'British Army': "GB",
+            'Canadian Army': "CAF",
+            'Australian Defence Force': "AUS",
+            'Irregular Militia Forces': "IRR",
+            'Middle Eastern Alliance': "MEA",
+            'Insurgent Forces': "INS",
         }
 
         this.nominations = [];
-        const rulesList = this.voteRules.rules;
-        let nominationsList = rulesList.default;
-        
-        //chomp string until we find a match
-        while(layerString.length > 0)
-        {
-            if(layerString in rulesList)
-            {
-                nominationsList = rulesList[layerString];
-                break;
+        this.tallies = [];
+        this.factionStrings = [];
+        let rnd_layers = [];
+        // let rnd_layers = [];
+        if (!cmdLayers) {
+            const all_layers = Layers.layers.filter((l) => [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()));
+            for (let i = 0; i < 6; i++) {
+                // rnd_layers.push(all_layers[Math.floor(Math.random()*all_layers.length)]);
+                let l = all_layers[ Math.floor(Math.random() * all_layers.length) ];
+                rnd_layers.push(l);
+                this.nominations.push(l.layerid)
+                this.tallies.push(0);
+                this.factionStrings.push(getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]));
             }
-            layerString = removeCAF(layerString);
-            layerString = splitName(layerString);
+            if (!bypassRaasFilter && rnd_layers.filter((l) => l.gamemode === 'RAAS').length < 3) this.populateNominations();
+        } else {
+            if (cmdLayers.length <= 6)
+                for (let cl of cmdLayers) {
+                    const cls = cl.split('_');
+                    const fLayers = Layers.layers.filter((l) => (l.classname.toLowerCase().startsWith(cls[ 0 ]) && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
+                    let l = fLayers[ Math.floor(Math.random() * fLayers.length) ]; rnd_layers.push(l);
+                    this.nominations.push(l.layerid)
+                    this.tallies.push(0);
+                    this.factionStrings.push(getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]));
+                }
+            else if (steamid) this.msgDirect(steamid, "You cannot start a vote with more than 6 options"); return;
         }
 
-        for(const nomination of nominationsList)
-        {
-            const mapName = nomination.map;
-            let mode = this.getMode(nomination, currentMode);
-            let version = randomElement(nomination.versions);
-            let cafPrefix = "";
-
-            if (version.includes("CAF_"))
-            {
-                cafPrefix = "CAF_";
-                version = removeCAF(version);
+        function getTranslation(t) {
+            if (translations[ t.faction ]) return translations[ t.faction ]
+            else {
+                const f = t.faction.split(' ');
+                let fTag = "";
+                f.forEach((e) => { fTag += e[ 0 ] });
+                return fTag.toUpperCase();
             }
-            
-            let builtLayerString = `${cafPrefix}${mapName}_${mode}_${version}`;
-            if (version === "Any")
-            {
-                let maps = this.matchLayers(`${mapName}_${mode}`);
-                if (maps.length == 0)
-                {
-                    this.verbose(1, `error: could not find layer for ${builtLayerString} from vote rule \"${layerString}\"`);
-                    continue;
-                }
-                maps = maps.map(l => l.layerid);
-                builtLayerString = randomElement(maps);
-            }
-            
-            if (!Layers.getLayerByCondition((layer) => layer.layerid === builtLayerString))
-            {
-                this.verbose(1, `error: could not find layer for ${builtLayerString} from vote rule \"${layerString}\"`);
-                continue;
-            }
-            this.nominations.push(builtLayerString);
-			this.tallies.push(0);
         }
     }
 
     //checks if there are enough players to start voting, if not binds itself to player connected
     //when there are enough players it clears old votes, sets up new nominations, and starts broadcast
-    beginVoting(force = false)
-    {
+    beginVoting(force = false, steamid = null, cmdLayers = null) {
         const playerCount = this.server.players.length;
         const minPlayers = this.options.minPlayersForVote;
 
         if (this.votingEnabled) //voting has already started
             return;
 
-        if (playerCount < minPlayers && !force)
-        {
-            if (this.onConnectBound == false)
-            {
+        if (playerCount < minPlayers && !force) {
+            if (this.onConnectBound == false) {
                 this.server.on("PLAYER_CONNECTED", this.beginVoting)
                 this.onConnectBound = true;
             }
             return;
         }
-        if (this.onConnectBound)
-        {
+        if (this.onConnectBound) {
             this.server.removeEventListener("PLAYER_CONNECTED", this.beginVoting);
             this.onConnectBound = false;
         }
@@ -361,97 +336,93 @@ export default class MapVote extends BasePlugin
         // these need to be reset after reenabling voting
         this.trackedVotes = {};
         this.tallies = [];
-        
-        this.populateNominations();
-        
+
+        this.populateNominations(steamid, cmdLayers);
+
         this.votingEnabled = true;
-		this.broadcastNominations();
+        this.firstBroadcast = true;
+        this.broadcastNominations();
         this.broadcastIntervalTask = setInterval(this.broadcastNominations, toMils(this.options.voteBroadcastInterval));
     }
-    
-    endVoting()
-    {
+
+    endVoting() {
         this.votingEnabled = false;
         clearInterval(this.broadcastIntervalTask);
         this.broadcastIntervalTask = null;
     }
 
     //sends a message about nominations through a broadcast
-	//NOTE: max squad broadcast message length appears to be 485 characters
+    //NOTE: max squad broadcast message length appears to be 485 characters
     //Note: broadcast strings with multi lines are very strange
-    async broadcastNominations()
-    {
-        await this.msgBroadcast("Type !vote <map number> in chat to cast your vote, Candidates:\n");
-        let nominationStrings = [];
-        for(let choice in this.nominations)
-		{
-			choice = Number(choice);
-            nominationStrings.push(formatChoice(choice, this.nominations[choice], this.tallies[choice]));
-		}
-        await this.msgBroadcast(nominationStrings.join("\n"));
+    async broadcastNominations() {
+        if(this.nominations.length>0){
+            await this.msgBroadcast("✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!\n");
+            let nominationStrings = [];
+            for (let choice in this.nominations) {
+                choice = Number(choice);
+                nominationStrings.push(formatChoice(choice, this.nominations[ choice ].replace(/\_/gi, ' ').replace(/\sv\d{1,2}/gi, '') + ' ' + this.factionStrings[ choice ], this.tallies[ choice ], this.firstBroadcast));
+            }
+            await this.msgBroadcast(nominationStrings.join("\n"));
+    
+            this.firstBroadcast = false;
+        }
         //const winners = this.currentWinners;
         //await this.msgBroadcast(`Current winner${winners.length > 1 ? "s" : ""}: ${winners.join(", ")}`);
     }
 
-    async directMsgNominations(steamID)
-    {
-        for(let choice in this.nominations)
-		{
-			choice = Number(choice);
-            await this.msgDirect(steamID, formatChoice(choice, this.nominations[choice], this.tallies[choice]));
-		}
-        
+    async directMsgNominations(steamID) {
+        for (let choice in this.nominations) {
+            choice = Number(choice);
+            await this.msgDirect(steamID, formatChoice(choice, this.nominations[ choice ], this.tallies[ choice ]));
+        }
+
         const winners = this.currentWinners;
         await this.msgDirect(steamID, `Current winner${winners.length > 1 ? "s" : ""}: ${winners.join(", ")}`);
     }
 
     //counts a vote from a player and adds it to tallies
-    async registerVote(steamID, nominationIndex, playerName)
-    {
+    async registerVote(steamID, nominationIndex, playerName) {
         nominationIndex -= 1; // shift indices from display range
-        if(nominationIndex < 0 || nominationIndex > this.nominations.length)
-        {
+        if (nominationIndex < 0 || nominationIndex > this.nominations.length) {
             await this.msgDirect(steamID, `[Map Vote] ${playerName}: invalid map number, typ !vote results to see map numbers`);
             return;
         }
-        
-        const previousVote = this.trackedVotes[steamID];
-        this.trackedVotes[steamID] = nominationIndex;
-        
-        this.tallies[nominationIndex] += 1;
-        if(previousVote !== undefined)
-            this.tallies[previousVote] -= 1;
-		await this.msgDirect(steamID, `you voted for ${this.nominations[nominationIndex]}`);
+
+        const previousVote = this.trackedVotes[ steamID ];
+        this.trackedVotes[ steamID ] = nominationIndex;
+
+        this.tallies[ nominationIndex ] += 1;
+        if (previousVote !== undefined)
+            this.tallies[ previousVote ] -= 1;
+        await this.msgDirect(steamID, `Registered vote: ${this.nominations[ nominationIndex ].replace(/\_/gi, ' ').replace(/\sv\d{1,2}/gi, '')} ${this.factionStrings[ nominationIndex ]} (${this.tallies[ nominationIndex ]} votes)`);
+        // await this.msgDirect(steamID, `Registered vote`);// ${this.nominations[ nominationIndex ]} ${this.factionStrings[ nominationIndex ]} (${this.tallies[ nominationIndex ]} votes)`);
+        // await this.msgDirect(steamID, `${this.nominations[ nominationIndex ]} (${this.tallies[ nominationIndex ]} votes)`);
+        // await this.msgDirect(steamID, `${this.factionStrings[ nominationIndex ]}`);
+        // await this.msgDirect(steamID, `${this.tallies[ nominationIndex ]} votes`);
     }
-    
+
     //removes a players vote if they disconnect from the sever
-    clearVote()
-    {   
+    clearVote() {
         const currentPlayers = this.server.players.map((p) => p.steamID);
-        for (const steamID in this.trackedVotes)
-		{
-            if (!(currentPlayers.includes(steamID)))
-            {
-                const vote = this.trackedVotes[steamID];
-                this.tallies[vote] -= 1;
-                delete this.trackedVotes[steamID];
+        for (const steamID in this.trackedVotes) {
+            if (!(currentPlayers.includes(steamID))) {
+                const vote = this.trackedVotes[ steamID ];
+                this.tallies[ vote ] -= 1;
+                delete this.trackedVotes[ steamID ];
             }
-		}
+        }
     }
 
     //calculates the current winner(s) of the vote and returns thier strings in an array
-    get currentWinners()
-    {
+    get currentWinners() {
         const ties = [];
-        
+
         let highestScore = -Infinity;
-        for(let choice in this.tallies)
-        {
-            const score = this.tallies[choice];
-            if(score < highestScore)
+        for (let choice in this.tallies) {
+            const score = this.tallies[ choice ];
+            if (score < highestScore)
                 continue;
-            else if(score > highestScore)
-            {
+            else if (score > highestScore) {
                 highestScore = score;
                 ties.length = 0;
                 ties.push(choice);
@@ -459,7 +430,7 @@ export default class MapVote extends BasePlugin
             else // equal
                 ties.push(choice);
         }
-        
-        return ties.map(i => this.nominations[i]);
+
+        return ties.map(i => this.nominations[ i ]);
     }
 }
