@@ -1,3 +1,1 @@
-map vote plugin for squad js
-
-config tool: https://maskedmonkyman.github.io/squad-js-map-vote/
+map vote plugin for squad js based on the original version https://github.com/maskedmonkyman/squad-js-map-vote
