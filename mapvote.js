@@ -35,29 +35,29 @@ export default class MapVote extends BasePlugin {
                 description: "command name to use in chat",
                 default: "!vote"
             },
-            voteRulesPath:
-            {
-                required: false,
-                description: 'the path to the layersConfig file',
-                default: ''
-            },
             minPlayersForVote:
             {
                 required: false,
                 description: 'number of players needed on the server for a vote to start',
-                default: 50
+                default: 40
             },
             voteWaitTimeFromMatchStart:
             {
                 required: false,
-                description: 'time in mils from the start of a round to the start of a new map vote',
-                default: 20
+                description: 'time in mins from the start of a round to the start of a new map vote',
+                default: 15
             },
             voteBroadcastInterval:
             {
                 required: false,
-                description: 'broadcast interval for vote notification in mils',
-                default: 15
+                description: 'broadcast interval for vote notification in mins',
+                default: 7
+            },
+            automaticSeedingMode:
+            {
+                required: false,
+                description: 'set a seeding layer if server has less than 20 players',
+                default: true
             }
         };
     }
@@ -82,9 +82,6 @@ export default class MapVote extends BasePlugin {
 
         this.msgBroadcast = (msg) => { this.server.rcon.broadcast(msg); };
         this.msgDirect = (steamid, msg) => { this.server.rcon.warn(steamid, msg); };
-
-        //load voteRules with options from source file
-        this.loadLayersConfig();
     }
 
     async mount() {
@@ -92,6 +89,7 @@ export default class MapVote extends BasePlugin {
         this.server.on('CHAT_MESSAGE', this.onChatMessage);
         this.server.on('PLAYER_DISCONNECTED', this.onPlayerDisconnected);
         this.verbose(1, 'Map vote was mounted.');
+        this.setSeedingMode();
     }
 
     async unmount() {
@@ -102,23 +100,6 @@ export default class MapVote extends BasePlugin {
         this.verbose(1, 'Map vote was un-mounted.');
     }
 
-    //loads layer configs from disk into plugin memory
-    loadLayersConfig() {
-        this.verbose(1, `Fetching Map Voting Lists...`);
-
-        let layersConfigString = '';
-        try {
-            if (!fs.existsSync(this.options.voteRulesPath))
-                throw new Error(`Could not find Map Vote List at ${this.options.voteRulesPath}`);
-            layersConfigString = fs.readFileSync(this.options.voteRulesPath, 'utf8');
-        }
-        catch (error) {
-            this.verbose('SquadServer', 1, `Error fetching mapvoting list: ${options.voteRulesPath}`, error);
-        }
-
-        this.voteRules = JSON.parse(layersConfigString);
-    }
-
     async onNewGame() {
         //wait to start voting
         this.endVoting();
@@ -127,13 +108,27 @@ export default class MapVote extends BasePlugin {
         this.nominations = [];
         this.factionStrings = [];
         setTimeout(this.beginVoting, toMils(this.options.voteWaitTimeFromMatchStart));
+        this.setSeedingMode();
     }
-
+    
     async onPlayerDisconnected() {
         if (!this.votingEnabled) return;
         await this.server.updatePlayerList();
         this.clearVote();
         this.updateNextMap();
+        this.setSeedingMode();
+    }
+    
+    setSeedingMode(){
+        if(this.options.automaticSeedingMode && Layers.layers.filter((l)=>l.layerid == server.nextLayer)[0].gamemode.toLowerCase()!="seed"){
+            const mapBlacklist = ["BlackCoast"];
+            const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase()=="SEED" && !mapBlacklist.includes(l.classname))
+            const nextMap = randomElement(seedingMaps).layerid;
+            if(this.server.players && this.server.players.length < 20){
+                this.verbose(1, 'Going into seeding mode.');
+                this.server.rcon.execute(`AdminSetNextLayer ${nextMap}`);
+            }
+        }
     }
 
     async onChatMessage(info) {
@@ -277,11 +272,11 @@ export default class MapVote extends BasePlugin {
         this.factionStrings = [];
         let rnd_layers = [];
         // let rnd_layers = [];
-        if (!cmdLayers) {
+        if (cmdLayers.length==0) {
             const all_layers = Layers.layers.filter((l) => [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()));
             for (let i = 0; i < 6; i++) {
                 // rnd_layers.push(all_layers[Math.floor(Math.random()*all_layers.length)]);
-                let l = all_layers[ Math.floor(Math.random() * all_layers.length) ];
+                let l = randomElement(all_layers);
                 rnd_layers.push(l);
                 this.nominations.push(l.layerid)
                 this.tallies.push(0);
@@ -292,7 +287,7 @@ export default class MapVote extends BasePlugin {
             if (cmdLayers.length <= 6)
                 for (let cl of cmdLayers) {
                     const cls = cl.split('_');
-                    const fLayers = Layers.layers.filter((l) => (l.classname.toLowerCase().startsWith(cls[ 0 ]) && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
+                    const fLayers = Layers.layers.filter((l) => ((l.classname.toLowerCase().startsWith(cls[ 0 ]) || cls[0]=="*") && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
                     let l = fLayers[ Math.floor(Math.random() * fLayers.length) ]; rnd_layers.push(l);
                     this.nominations.push(l.layerid)
                     this.tallies.push(0);
