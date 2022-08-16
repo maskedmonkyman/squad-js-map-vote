@@ -108,9 +108,9 @@ export default class MapVote extends BasePlugin {
         this.nominations = [];
         this.factionStrings = [];
         setTimeout(this.beginVoting, toMils(this.options.voteWaitTimeFromMatchStart));
-        this.setSeedingMode();
+        setTimeout(this.setSeedingMode, 30000);
     }
-    
+
     async onPlayerDisconnected() {
         if (!this.votingEnabled) return;
         await this.server.updatePlayerList();
@@ -118,13 +118,14 @@ export default class MapVote extends BasePlugin {
         this.updateNextMap();
         this.setSeedingMode();
     }
-    
-    setSeedingMode(){
-        if(this.options.automaticSeedingMode && Layers.layers.filter((l)=>l.layerid == server.nextLayer)[0].gamemode.toLowerCase()!="seed"){
-            const mapBlacklist = ["BlackCoast"];
-            const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase()=="SEED" && !mapBlacklist.includes(l.classname))
+
+    setSeedingMode() {
+        if (this.options.automaticSeedingMode && (this.server.nextLayer.gamemode.toLowerCase() != "seed" || this.server.currentLayer.layerid == this.server.nextLayer.layerid)) {
+            const mapBlacklist = [ "BlackCoast" ];
+            const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && !mapBlacklist.includes(l.classname) && l.layerid != this.server.currentLayer.layerid)
+            
             const nextMap = randomElement(seedingMaps).layerid;
-            if(this.server.players && this.server.players.length < 20){
+            if (this.server.players && this.server.players.length < 20) {
                 this.verbose(1, 'Going into seeding mode.');
                 this.server.rcon.execute(`AdminSetNextLayer ${nextMap}`);
             }
@@ -250,7 +251,7 @@ export default class MapVote extends BasePlugin {
     }
 
     //TODO: right now if version is set to "Any" no caf layers will be selected
-    populateNominations(steamid = null, cmdLayers = null, bypassRaasFilter = false) //gets nomination strings from layer options
+    populateNominations(steamid = null, cmdLayers = [], bypassRaasFilter = false) //gets nomination strings from layer options
     {
         // this.nominations.push(builtLayerString);
         // this.tallies.push(0);
@@ -272,11 +273,12 @@ export default class MapVote extends BasePlugin {
         this.factionStrings = [];
         let rnd_layers = [];
         // let rnd_layers = [];
-        if (cmdLayers.length==0) {
+        if (cmdLayers.length == 0) {
             const all_layers = Layers.layers.filter((l) => [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()));
             for (let i = 0; i < 6; i++) {
                 // rnd_layers.push(all_layers[Math.floor(Math.random()*all_layers.length)]);
-                let l = randomElement(all_layers);
+                let l;
+                do l = randomElement(all_layers); while (rnd_layers.includes(l))
                 rnd_layers.push(l);
                 this.nominations.push(l.layerid)
                 this.tallies.push(0);
@@ -284,11 +286,14 @@ export default class MapVote extends BasePlugin {
             }
             if (!bypassRaasFilter && rnd_layers.filter((l) => l.gamemode === 'RAAS').length < 3) this.populateNominations();
         } else {
+            if (cmdLayers.length == 1 && cmdLayers[0].split('_')[0]=="*") for (let i = 0; i < 5; i++) cmdLayers.push(cmdLayers[ 0 ])
             if (cmdLayers.length <= 6)
                 for (let cl of cmdLayers) {
                     const cls = cl.split('_');
-                    const fLayers = Layers.layers.filter((l) => ((l.classname.toLowerCase().startsWith(cls[ 0 ]) || cls[0]=="*") && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
-                    let l = fLayers[ Math.floor(Math.random() * fLayers.length) ]; rnd_layers.push(l);
+                    const fLayers = Layers.layers.filter((l) => ((cls[ 0 ] == "*" || l.classname.toLowerCase().startsWith(cls[ 0 ])) && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
+                    let l;
+                    do l = randomElement(fLayers); while (rnd_layers.includes(l))
+                    rnd_layers.push(l);
                     this.nominations.push(l.layerid)
                     this.tallies.push(0);
                     this.factionStrings.push(getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]));
@@ -350,7 +355,7 @@ export default class MapVote extends BasePlugin {
     //NOTE: max squad broadcast message length appears to be 485 characters
     //Note: broadcast strings with multi lines are very strange
     async broadcastNominations() {
-        if(this.nominations.length>0){
+        if (this.nominations.length > 0) {
             await this.msgBroadcast("✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!\n");
             let nominationStrings = [];
             for (let choice in this.nominations) {
@@ -358,7 +363,7 @@ export default class MapVote extends BasePlugin {
                 nominationStrings.push(formatChoice(choice, this.nominations[ choice ].replace(/\_/gi, ' ').replace(/\sv\d{1,2}/gi, '') + ' ' + this.factionStrings[ choice ], this.tallies[ choice ], this.firstBroadcast));
             }
             await this.msgBroadcast(nominationStrings.join("\n"));
-    
+
             this.firstBroadcast = false;
         }
         //const winners = this.currentWinners;
