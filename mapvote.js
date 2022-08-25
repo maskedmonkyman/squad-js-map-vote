@@ -101,14 +101,15 @@ export default class MapVote extends BasePlugin {
     }
 
     async onNewGame() {
-        //wait to start voting
-        this.endVoting();
-        this.trackedVotes = {};
-        this.tallies = [];
-        this.nominations = [];
-        this.factionStrings = [];
-        setTimeout(this.beginVoting, toMils(this.options.voteWaitTimeFromMatchStart));
-        setTimeout(this.setSeedingMode, 30000);
+        setTimeout(async () => {
+            this.endVoting();
+            this.trackedVotes = {};
+            this.tallies = [];
+            this.nominations = [];
+            this.factionStrings = [];
+            setTimeout(this.beginVoting, toMils(this.options.voteWaitTimeFromMatchStart));
+            setTimeout(() => { this.setSeedingMode() }, 20000);
+        }, 10000)
     }
 
     async onPlayerDisconnected() {
@@ -116,14 +117,15 @@ export default class MapVote extends BasePlugin {
         await this.server.updatePlayerList();
         this.clearVote();
         this.updateNextMap();
-        this.setSeedingMode();
     }
 
     setSeedingMode() {
+        // setTimeout(()=>{this.msgDirect('76561198419229279',"MV\ntest\ntest")},1000)
+        // this.msgBroadcast("[MapVote] Seeding mode active")
         if (this.options.automaticSeedingMode && (this.server.nextLayer.gamemode.toLowerCase() != "seed" || this.server.currentLayer.layerid == this.server.nextLayer.layerid)) {
             const mapBlacklist = [ "BlackCoast" ];
             const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && !mapBlacklist.includes(l.classname) && l.layerid != this.server.currentLayer.layerid)
-            
+
             const nextMap = randomElement(seedingMaps).layerid;
             if (this.server.players && this.server.players.length < 20) {
                 this.verbose(1, 'Going into seeding mode.');
@@ -159,12 +161,6 @@ export default class MapVote extends BasePlugin {
         switch (subCommand) // select the sub command
         {
             case "choices": //sends choices to player in the from of a warning
-                if (!this.votingEnabled) {
-                    await this.msgDirect(steamID, "There is no vote running right now");
-                    return;
-                }
-                this.directMsgNominations(steamID);
-                return;
             case "results": //sends player the results in a warning
                 if (!this.votingEnabled) {
                     await this.msgDirect(steamID, "There is no vote running right now");
@@ -273,7 +269,7 @@ export default class MapVote extends BasePlugin {
         this.factionStrings = [];
         let rnd_layers = [];
         // let rnd_layers = [];
-        if (cmdLayers.length == 0) {
+        if (!cmdLayers || cmdLayers.length == 0) {
             const all_layers = Layers.layers.filter((l) => [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()));
             for (let i = 0; i < 6; i++) {
                 // rnd_layers.push(all_layers[Math.floor(Math.random()*all_layers.length)]);
@@ -286,7 +282,7 @@ export default class MapVote extends BasePlugin {
             }
             if (!bypassRaasFilter && rnd_layers.filter((l) => l.gamemode === 'RAAS').length < 3) this.populateNominations();
         } else {
-            if (cmdLayers.length == 1 && cmdLayers[0].split('_')[0]=="*") for (let i = 0; i < 5; i++) cmdLayers.push(cmdLayers[ 0 ])
+            if (cmdLayers.length == 1 && cmdLayers[ 0 ].split('_')[ 0 ] == "*") for (let i = 0; i < 5; i++) cmdLayers.push(cmdLayers[ 0 ])
             if (cmdLayers.length <= 6)
                 for (let cl of cmdLayers) {
                     const cls = cl.split('_');
@@ -315,6 +311,7 @@ export default class MapVote extends BasePlugin {
     //checks if there are enough players to start voting, if not binds itself to player connected
     //when there are enough players it clears old votes, sets up new nominations, and starts broadcast
     beginVoting(force = false, steamid = null, cmdLayers = null) {
+        this.verbose(1, "Starting vote")
         const playerCount = this.server.players.length;
         const minPlayers = this.options.minPlayersForVote;
 
@@ -355,7 +352,7 @@ export default class MapVote extends BasePlugin {
     //NOTE: max squad broadcast message length appears to be 485 characters
     //Note: broadcast strings with multi lines are very strange
     async broadcastNominations() {
-        if (this.nominations.length > 0) {
+        if (this.nominations.length > 0 && this.votingEnabled) {
             await this.msgBroadcast("✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!\n");
             let nominationStrings = [];
             for (let choice in this.nominations) {
@@ -371,13 +368,17 @@ export default class MapVote extends BasePlugin {
     }
 
     async directMsgNominations(steamID) {
+        let strMsg = "";
         for (let choice in this.nominations) {
             choice = Number(choice);
-            await this.msgDirect(steamID, formatChoice(choice, this.nominations[ choice ], this.tallies[ choice ]));
+            // await this.msgDirect(steamID, formatChoice(choice, this.nominations[ choice ], this.tallies[ choice ]));
+            strMsg += (steamID, formatChoice(choice, this.nominations[ choice ], this.tallies[ choice ])) + "\n";
         }
+        strMsg.trim();
+        this.msgDirect(steamID, strMsg)
 
-        const winners = this.currentWinners;
-        await this.msgDirect(steamID, `Current winner${winners.length > 1 ? "s" : ""}: ${winners.join(", ")}`);
+        // const winners = this.currentWinners;
+        // await this.msgDirect(steamID, `Current winner${winners.length > 1 ? "s" : ""}: ${winners.join(", ")}`);
     }
 
     //counts a vote from a player and adds it to tallies
