@@ -58,6 +58,11 @@ export default class MapVote extends BasePlugin {
                 required: false,
                 description: 'set a seeding layer if server has less than 20 players',
                 default: true
+            },
+            numberRecentMapsToExlude:{
+                required: false,
+                description: 'random layer list will not include the n. recent maps',
+                default: 4
             }
         };
     }
@@ -270,7 +275,7 @@ export default class MapVote extends BasePlugin {
         let rnd_layers = [];
         // let rnd_layers = [];
         if (!cmdLayers || cmdLayers.length == 0) {
-            const all_layers = Layers.layers.filter((l) => [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()));
+            const all_layers = Layers.layers.filter((l) => [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()) && ![this.server.currentLayer.classname,...objArrToValArr(this.server.layerHistory.splice(0,this.options.numberRecentMapsToExlude),"classname")].includes(l.classname));
             for (let i = 0; i < 6; i++) {
                 // rnd_layers.push(all_layers[Math.floor(Math.random()*all_layers.length)]);
                 let l;
@@ -347,7 +352,11 @@ export default class MapVote extends BasePlugin {
         clearInterval(this.broadcastIntervalTask);
         this.broadcastIntervalTask = null;
     }
-
+    objArrToValArr(arr,key){
+        let vet = [];
+        for(let o of arr) if(arr[key]) vet.push(arr[key]);
+        return vet;
+    }
     //sends a message about nominations through a broadcast
     //NOTE: max squad broadcast message length appears to be 485 characters
     //Note: broadcast strings with multi lines are very strange
