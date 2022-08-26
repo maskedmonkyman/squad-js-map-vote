@@ -325,13 +325,13 @@ export default class MapVote extends BasePlugin {
 
         if (playerCount < minPlayers && !force) {
             if (this.onConnectBound == false) {
-                this.server.on("PLAYER_CONNECTED", this.beginVoting)
+                this.server.on("PLAYER_CONNECTED", ()=>{this.beginVoting})
                 this.onConnectBound = true;
             }
             return;
         }
         if (this.onConnectBound) {
-            this.server.removeEventListener("PLAYER_CONNECTED", this.beginVoting);
+            this.server.removeEventListener("PLAYER_CONNECTED", ()=>{this.beginVoting});
             this.onConnectBound = false;
         }
 
