@@ -59,7 +59,7 @@ export default class MapVote extends BasePlugin {
                 description: 'set a seeding layer if server has less than 20 players',
                 default: true
             },
-            numberRecentMapsToExlude:{
+            numberRecentMapsToExlude: {
                 required: false,
                 description: 'random layer list will not include the n. recent maps',
                 default: 4
@@ -205,11 +205,11 @@ export default class MapVote extends BasePlugin {
                 this.broadcastNominations();
                 return;
             case "help": //displays available commands
-                await this.msgDirect(steamID, `Map voting system built by JetDave for MAD`);
-                await this.msgDirect(steamID, `!vote <choices|number|results>`);
-                if (!isAdmin) return;
+                let msg = "";
+                msg += (`!vote <choices|number|results>\n`);
+                if (isAdmin) msg += (`!vote <start|restart|cancel|broadcast> (admin only)\n`);
 
-                await this.msgDirect(steamID, `!vote <start|restart|cancel|broadcast> (admin only)`);
+                await this.msgDirect(steamID, msg + `\nMapVote SquadJS plugin built by JetDave`);
                 return;
             default:
                 //give them an error
@@ -275,7 +275,7 @@ export default class MapVote extends BasePlugin {
         let rnd_layers = [];
         // let rnd_layers = [];
         if (!cmdLayers || cmdLayers.length == 0) {
-            const all_layers = Layers.layers.filter((l) => [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()) && ![this.server.currentLayer.classname,...this.objArrToValArr(this.server.layerHistory.splice(0,this.options.numberRecentMapsToExlude),"classname")].includes(l.classname));
+            const all_layers = Layers.layers.filter((l) => [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()) && ![ this.server.currentLayer.classname, ...this.objArrToValArr(this.server.layerHistory.splice(0, this.options.numberRecentMapsToExlude), "classname") ].includes(l.classname));
             for (let i = 0; i < 6; i++) {
                 // rnd_layers.push(all_layers[Math.floor(Math.random()*all_layers.length)]);
                 let l;
@@ -325,13 +325,13 @@ export default class MapVote extends BasePlugin {
 
         if (playerCount < minPlayers && !force) {
             if (this.onConnectBound == false) {
-                this.server.on("PLAYER_CONNECTED", ()=>{this.beginVoting})
+                this.server.on("PLAYER_CONNECTED", () => { this.beginVoting })
                 this.onConnectBound = true;
             }
             return;
         }
         if (this.onConnectBound) {
-            this.server.removeEventListener("PLAYER_CONNECTED", ()=>{this.beginVoting});
+            this.server.removeEventListener("PLAYER_CONNECTED", () => { this.beginVoting });
             this.onConnectBound = false;
         }
 
@@ -352,9 +352,9 @@ export default class MapVote extends BasePlugin {
         clearInterval(this.broadcastIntervalTask);
         this.broadcastIntervalTask = null;
     }
-    objArrToValArr(arr,key){
+    objArrToValArr(arr, key) {
         let vet = [];
-        for(let o of arr) if(arr[key]) vet.push(arr[key]);
+        for (let o of arr) if (arr[ key ]) vet.push(arr[ key ]);
         return vet;
     }
     //sends a message about nominations through a broadcast
