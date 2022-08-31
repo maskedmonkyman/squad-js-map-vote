@@ -127,7 +127,7 @@ export default class MapVote extends BasePlugin {
     setSeedingMode() {
         // setTimeout(()=>{this.msgDirect('76561198419229279',"MV\ntest\ntest")},1000)
         // this.msgBroadcast("[MapVote] Seeding mode active")
-        if (this.options.automaticSeedingMode && (this.server.nextLayer.gamemode.toLowerCase() != "seed" || this.server.currentLayer.layerid == this.server.nextLayer.layerid)) {
+        if (this.options.automaticSeedingMode && ((this.server.nextLayer && this.server.nextLayer.gamemode.toLowerCase() != "seed") || this.server.currentLayer.layerid == this.server.nextLayer.layerid)) {
             const mapBlacklist = [ "BlackCoast" ];
             const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && !mapBlacklist.includes(l.classname) && l.layerid != this.server.currentLayer.layerid)
 
@@ -275,7 +275,7 @@ export default class MapVote extends BasePlugin {
         let rnd_layers = [];
         // let rnd_layers = [];
         if (!cmdLayers || cmdLayers.length == 0) {
-            const all_layers = Layers.layers.filter((l) => [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()) && ![this.server.currentLayer.classname,...objArrToValArr(this.server.layerHistory.splice(0,this.options.numberRecentMapsToExlude),"classname")].includes(l.classname));
+            const all_layers = Layers.layers.filter((l) => [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()) && ![this.server.currentLayer.classname,...this.objArrToValArr(this.server.layerHistory.splice(0,this.options.numberRecentMapsToExlude),"classname")].includes(l.classname));
             for (let i = 0; i < 6; i++) {
                 // rnd_layers.push(all_layers[Math.floor(Math.random()*all_layers.length)]);
                 let l;
