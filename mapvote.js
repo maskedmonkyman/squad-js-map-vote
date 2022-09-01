@@ -294,10 +294,12 @@ export default class MapVote extends BasePlugin {
                     const fLayers = Layers.layers.filter((l) => ((cls[ 0 ] == "*" || l.classname.toLowerCase().startsWith(cls[ 0 ])) && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
                     let l;
                     do l = randomElement(fLayers); while (rnd_layers.includes(l))
-                    rnd_layers.push(l);
-                    this.nominations.push(l.layerid)
-                    this.tallies.push(0);
-                    this.factionStrings.push(getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]));
+                    if(l){
+                        rnd_layers.push(l);
+                        this.nominations.push(l.layerid)
+                        this.tallies.push(0);
+                        this.factionStrings.push(getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]));
+                    }
                 }
             else if (steamid) this.msgDirect(steamid, "You cannot start a vote with more than 6 options"); return;
         }
