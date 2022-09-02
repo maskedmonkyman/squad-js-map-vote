@@ -85,8 +85,8 @@ export default class MapVote extends BasePlugin {
         this.broadcastNominations = this.broadcastNominations.bind(this);
         this.beginVoting = this.beginVoting.bind(this);
 
-        this.msgBroadcast = (msg) => { this.server.rcon.broadcast(msg); };
-        this.msgDirect = (steamid, msg) => { this.server.rcon.warn(steamid, msg); };
+        this.broadcast = (msg) => { this.server.rcon.broadcast(msg); };
+        this.warn = (steamid, msg) => { this.server.rcon.warn(steamid, msg); };
     }
 
     async mount() {
@@ -127,7 +127,7 @@ export default class MapVote extends BasePlugin {
     setSeedingMode() {
         // setTimeout(()=>{this.msgDirect('76561198419229279',"MV\ntest\ntest")},1000)
         // this.msgBroadcast("[MapVote] Seeding mode active")
-        if (this.options.automaticSeedingMode && ((this.server.nextLayer && this.server.nextLayer.gamemode.toLowerCase() != "seed") || this.server.currentLayer.layerid == this.server.nextLayer.layerid)) {
+        if (this && this.options && this.server && this.options.automaticSeedingMode && ((this.server.nextLayer && this.server.nextLayer.gamemode.toLowerCase() != "seed") || this.server.currentLayer.layerid == this.server.nextLayer.layerid)) {
             const mapBlacklist = [ "BlackCoast" ];
             const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && !mapBlacklist.includes(l.classname) && l.layerid != this.server.currentLayer.layerid)
 
@@ -154,7 +154,7 @@ export default class MapVote extends BasePlugin {
         {
             const mapNumber = parseInt(subCommand); //try to get a vote number
             if (!this.votingEnabled) {
-                await this.msgDirect(steamID, "There is no vote running right now");
+                await this.warn(steamID, "There is no vote running right now");
                 return;
             }
             await this.registerVote(steamID, mapNumber, playerName);
@@ -168,7 +168,7 @@ export default class MapVote extends BasePlugin {
             case "choices": //sends choices to player in the from of a warning
             case "results": //sends player the results in a warning
                 if (!this.votingEnabled) {
-                    await this.msgDirect(steamID, "There is no vote running right now");
+                    await this.warn(steamID, "There is no vote running right now");
                     return;
                 }
                 this.directMsgNominations(steamID);
@@ -177,7 +177,7 @@ export default class MapVote extends BasePlugin {
                 if (!isAdmin) return;
 
                 if (this.votingEnabled) {
-                    await this.msgDirect(steamID, "Voting is already enabled");
+                    await this.warn(steamID, "Voting is already enabled");
                     return;
                 }
                 this.beginVoting(true, steamID, cmdLayers);
@@ -191,15 +191,15 @@ export default class MapVote extends BasePlugin {
                 if (!isAdmin) return;
 
                 if (!this.votingEnabled) {
-                    await this.msgDirect(steamID, "There is no vote running right now");
+                    await this.warn(steamID, "There is no vote running right now");
                     return;
                 }
                 this.endVoting();
-                await this.msgDirect(steamID, "Ending current vote");
+                await this.warn(steamID, "Ending current vote");
                 return;
             case "broadcast":
                 if (!this.votingEnabled) {
-                    await this.msgDirect(steamID, "There is no vote running right now");
+                    await this.warn(steamID, "There is no vote running right now");
                     return;
                 }
                 this.broadcastNominations();
@@ -209,11 +209,11 @@ export default class MapVote extends BasePlugin {
                 msg += (`!vote <choices|number|results>\n`);
                 if (isAdmin) msg += (`!vote <start|restart|cancel|broadcast> (admin only)\n`);
 
-                await this.msgDirect(steamID, msg + `\nMapVote SquadJS plugin built by JetDave`);
+                await this.warn(steamID, msg + `\nMapVote SquadJS plugin built by JetDave`);
                 return;
             default:
                 //give them an error
-                await this.msgDirect(steamID, `Unknown vote subcommand: ${subCommand}`);
+                await this.warn(steamID, `Unknown vote subcommand: ${subCommand}`);
                 return;
         }
 
@@ -301,7 +301,7 @@ export default class MapVote extends BasePlugin {
                         this.factionStrings.push(getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]));
                     }
                 }
-            else if (steamid) this.msgDirect(steamid, "You cannot start a vote with more than 6 options"); return;
+            else if (steamid) this.warn(steamid, "You cannot start a vote with more than 6 options"); return;
         }
 
         function getTranslation(t) {
@@ -364,13 +364,13 @@ export default class MapVote extends BasePlugin {
     //Note: broadcast strings with multi lines are very strange
     async broadcastNominations() {
         if (this.nominations.length > 0 && this.votingEnabled) {
-            await this.msgBroadcast("✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!\n");
+            await this.broadcast("✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!\n");
             let nominationStrings = [];
             for (let choice in this.nominations) {
                 choice = Number(choice);
                 nominationStrings.push(formatChoice(choice, this.nominations[ choice ].replace(/\_/gi, ' ').replace(/\sv\d{1,2}/gi, '') + ' ' + this.factionStrings[ choice ], this.tallies[ choice ], this.firstBroadcast));
             }
-            await this.msgBroadcast(nominationStrings.join("\n"));
+            await this.broadcast(nominationStrings.join("\n"));
 
             this.firstBroadcast = false;
         }
@@ -386,7 +386,7 @@ export default class MapVote extends BasePlugin {
             strMsg += (steamID, formatChoice(choice, this.nominations[ choice ], this.tallies[ choice ])) + "\n";
         }
         strMsg.trim();
-        this.msgDirect(steamID, strMsg)
+        this.warn(steamID, strMsg)
 
         // const winners = this.currentWinners;
         // await this.msgDirect(steamID, `Current winner${winners.length > 1 ? "s" : ""}: ${winners.join(", ")}`);
@@ -396,7 +396,7 @@ export default class MapVote extends BasePlugin {
     async registerVote(steamID, nominationIndex, playerName) {
         nominationIndex -= 1; // shift indices from display range
         if (nominationIndex < 0 || nominationIndex > this.nominations.length) {
-            await this.msgDirect(steamID, `[Map Vote] ${playerName}: invalid map number, typ !vote results to see map numbers`);
+            await this.warn(steamID, `[Map Vote] ${playerName}: invalid map number, typ !vote results to see map numbers`);
             return;
         }
 
@@ -406,7 +406,7 @@ export default class MapVote extends BasePlugin {
         this.tallies[ nominationIndex ] += 1;
         if (previousVote !== undefined)
             this.tallies[ previousVote ] -= 1;
-        await this.msgDirect(steamID, `Registered vote: ${this.nominations[ nominationIndex ].replace(/\_/gi, ' ').replace(/\sv\d{1,2}/gi, '')} ${this.factionStrings[ nominationIndex ]} (${this.tallies[ nominationIndex ]} votes)`);
+        await this.warn(steamID, `Registered vote: ${this.nominations[ nominationIndex ].replace(/\_/gi, ' ').replace(/\sv\d{1,2}/gi, '')} ${this.factionStrings[ nominationIndex ]} (${this.tallies[ nominationIndex ]} votes)`);
         // await this.msgDirect(steamID, `Registered vote`);// ${this.nominations[ nominationIndex ]} ${this.factionStrings[ nominationIndex ]} (${this.tallies[ nominationIndex ]} votes)`);
         // await this.msgDirect(steamID, `${this.nominations[ nominationIndex ]} (${this.tallies[ nominationIndex ]} votes)`);
         // await this.msgDirect(steamID, `${this.factionStrings[ nominationIndex ]}`);
