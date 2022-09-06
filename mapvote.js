@@ -104,7 +104,7 @@ export default class MapVote extends BasePlugin {
         this.server.on('CHAT_MESSAGE', this.onChatMessage);
         this.server.on('PLAYER_DISCONNECTED', this.onPlayerDisconnected);
         this.verbose(1, 'Map vote was mounted.');
-        this.verbose(1,"Blacklisted Layers/Levels: " + this.options.layerLevelBlacklist.join(', '))
+        this.verbose(1, "Blacklisted Layers/Levels: " + this.options.layerLevelBlacklist.join(', '))
         this.setSeedingMode();
     }
 
@@ -139,8 +139,7 @@ export default class MapVote extends BasePlugin {
         // setTimeout(()=>{this.msgDirect('76561198419229279',"MV\ntest\ntest")},1000)
         // this.msgBroadcast("[MapVote] Seeding mode active")
         if (this && this.options && this.server && this.options.automaticSeedingMode && ((this.server.nextLayer && this.server.nextLayer.gamemode.toLowerCase() != "seed") || this.server.currentLayer.layerid == this.server.nextLayer.layerid)) {
-            const mapBlacklist=[];
-const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && !mapBlacklist.includes(l.map.name) && l.layerid != this.server.currentLayer.layerid && !this.options.layerLevelBlacklist.find((fl)=>l.layerid.toLowerCase().startsWith(fl.toLowerCase())))
+            const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && l.layerid != this.server.currentLayer.layerid && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase())))
 
             const nextMap = randomElement(seedingMaps).layerid;
             if (this.server.players && this.server.players.length < 20) {
@@ -290,7 +289,7 @@ const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEE
 
             const recentlyPlayedMaps = this.objArrToValArr(this.server.layerHistory.splice(0, this.options.numberRecentMapsToExlude), "layer", "map", "name");
             this.verbose(1, recentlyPlayedMaps.join(', '))
-            const all_layers = Layers.layers.filter((l) => this.options.gamemodeWhitelist.includes(l.gamemode.toUpperCase()) && ![ this.server.currentLayer.map.name, ...recentlyPlayedMaps ].includes(l.map.name) && !this.options.layerLevelBlacklist.find((fl)=>l.layerid.toLowerCase().startsWith(fl.toLowerCase())));
+            const all_layers = Layers.layers.filter((l) => this.options.gamemodeWhitelist.includes(l.gamemode.toUpperCase()) && ![ this.server.currentLayer.map.name, ...recentlyPlayedMaps ].includes(l.map.name) && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase())));
             for (let i = 0; i < 6; i++) {
                 let l;
                 do l = randomElement(all_layers); while (rnd_layers.includes(l))
