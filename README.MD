@@ -45,6 +45,7 @@ The random layer list will not include the blacklisted layers or levels. (accept
 ```
 ### Example configuration
 ```json
+{
     "plugin": "MapVote",
     "enabled": true,
     "minPlayersForVote": 30,
