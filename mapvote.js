@@ -63,6 +63,16 @@ export default class MapVote extends BasePlugin {
                 required: false,
                 description: 'random layer list will not include the n. recent maps',
                 default: 4
+            },
+            gamemodeWhitelist: {
+                required: false,
+                description: 'random layer list will be generated with only selected gamemodes',
+                default: [ "AAS", "RAAS", "INVASION" ]
+            },
+            layerLevelBlacklist: {
+                required: false,
+                description: 'random layer list will not include the blacklisted layers or levels. (acceptable formats: Gorodok/Gorodok_RAAS/Gorodok_AAS_v1)',
+                default: []
             }
         };
     }
@@ -94,6 +104,7 @@ export default class MapVote extends BasePlugin {
         this.server.on('CHAT_MESSAGE', this.onChatMessage);
         this.server.on('PLAYER_DISCONNECTED', this.onPlayerDisconnected);
         this.verbose(1, 'Map vote was mounted.');
+        this.verbose(1,"Blacklisted Layers/Levels: " + this.options.layerLevelBlacklist.join(', '))
         this.setSeedingMode();
     }
 
@@ -128,8 +139,8 @@ export default class MapVote extends BasePlugin {
         // setTimeout(()=>{this.msgDirect('76561198419229279',"MV\ntest\ntest")},1000)
         // this.msgBroadcast("[MapVote] Seeding mode active")
         if (this && this.options && this.server && this.options.automaticSeedingMode && ((this.server.nextLayer && this.server.nextLayer.gamemode.toLowerCase() != "seed") || this.server.currentLayer.layerid == this.server.nextLayer.layerid)) {
-            const mapBlacklist = [ "BlackCoast" ];
-            const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && !mapBlacklist.includes(l.classname) && l.layerid != this.server.currentLayer.layerid)
+            const mapBlacklist = [ /*"Black Coast"*/ ];
+            const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && !mapBlacklist.includes(l.map.name) && l.layerid != this.server.currentLayer.layerid)
 
             const nextMap = randomElement(seedingMaps).layerid;
             if (this.server.players && this.server.players.length < 20) {
@@ -206,8 +217,8 @@ export default class MapVote extends BasePlugin {
                 return;
             case "help": //displays available commands
                 let msg = "";
-                msg += (`!vote <choices|number|results>\n`);
-                if (isAdmin) msg += (`!vote <start|restart|cancel|broadcast> (admin only)\n`);
+                msg += (`!vote\n > choices\n > results\n`);
+                if (isAdmin) msg += (`\n Admin only:\n > start\n > restart\n > cancel\n > broadcast`);
 
                 await this.warn(steamID, msg + `\nMapVote SquadJS plugin built by JetDave`);
                 return;
@@ -275,9 +286,12 @@ export default class MapVote extends BasePlugin {
         let rnd_layers = [];
         // let rnd_layers = [];
         if (!cmdLayers || cmdLayers.length == 0) {
-            const all_layers = Layers.layers.filter((l) => [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()) && ![ this.server.currentLayer.classname, ...this.objArrToValArr(this.server.layerHistory.splice(0, this.options.numberRecentMapsToExlude), "classname") ].includes(l.classname));
+            this.options.gamemodeWhitelist.forEach((e, k, a) => a[ k ] = e.toUpperCase());
+
+            const recentlyPlayedMaps = this.objArrToValArr(this.server.layerHistory.splice(0, this.options.numberRecentMapsToExlude), "layer", "map", "name");
+            this.verbose(1, recentlyPlayedMaps.join(', '))
+            const all_layers = Layers.layers.filter((l) => this.options.gamemodeWhitelist.includes(l.gamemode.toUpperCase()) && ![ this.server.currentLayer.map.name, ...recentlyPlayedMaps ].includes(l.map.name) && !this.options.layerLevelBlacklist.find((fl)=>l.layerid.toLowerCase().startsWith(fl.toLowerCase())));
             for (let i = 0; i < 6; i++) {
-                // rnd_layers.push(all_layers[Math.floor(Math.random()*all_layers.length)]);
                 let l;
                 do l = randomElement(all_layers); while (rnd_layers.includes(l))
                 rnd_layers.push(l);
@@ -294,7 +308,7 @@ export default class MapVote extends BasePlugin {
                     const fLayers = Layers.layers.filter((l) => ((cls[ 0 ] == "*" || l.classname.toLowerCase().startsWith(cls[ 0 ])) && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
                     let l;
                     do l = randomElement(fLayers); while (rnd_layers.includes(l))
-                    if(l){
+                    if (l) {
                         rnd_layers.push(l);
                         this.nominations.push(l.layerid)
                         this.tallies.push(0);
@@ -354,9 +368,16 @@ export default class MapVote extends BasePlugin {
         clearInterval(this.broadcastIntervalTask);
         this.broadcastIntervalTask = null;
     }
-    objArrToValArr(arr, key) {
+    objArrToValArr(arr, ...key) {
         let vet = [];
-        for (let o of arr) if (arr[ key ]) vet.push(arr[ key ]);
+        for (let o of arr) {
+            let obj = o;
+            for (let k of key) {
+                if (obj[ k ])
+                    obj = obj[ k ];
+            }
+            vet.push(obj);
+        }
         return vet;
     }
     //sends a message about nominations through a broadcast
