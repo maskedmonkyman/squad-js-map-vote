@@ -21,3 +21,13 @@
 <p>The set a seeding layer if server has less than 20 players.</p>
 <h6>Default</h6>
 <pre><code>true</code></pre></li>
+<li><h4>gamemodeWhitelist</h4>
+<h6>Description</h6>
+<p>The random layer list will be generated with only selected gamemodes.</p>
+<h6>Default</h6>
+<pre><code>[ "AAS", "RAAS", "INVASION" ]</code></pre></li>
+<li><h4>layerLevelBlacklist</h4>
+<h6>Description</h6>
+<p>The random layer list will not include the blacklisted layers or levels. (acceptable formats: Gorodok/Gorodok_RAAS/Gorodok_AAS_v1).</p>
+<h6>Default</h6>
+<pre><code>[]</code></pre></li>
