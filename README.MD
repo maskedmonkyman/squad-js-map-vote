@@ -32,8 +32,7 @@
 <h6>Default</h6>
 <pre><code>[]</code></pre></li>
 <h3>Example configuration</h3>
-<pre><code>
-{
+```json{
     "plugin": "MapVote",
     "enabled": true,
     "minPlayersForVote": 30,
@@ -44,5 +43,4 @@
     "gamemodeWhitelist": [ "AAS", "RAAS", "Invasion" ],
     "layerLevelBlacklist": [ "BlackCoast_Seed" ]
 }
-</code></pre></li>
-
+```
