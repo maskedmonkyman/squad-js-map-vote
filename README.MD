@@ -31,3 +31,18 @@
 <p>The random layer list will not include the blacklisted layers or levels. (acceptable formats: Gorodok/Gorodok_RAAS/Gorodok_AAS_v1).</p>
 <h6>Default</h6>
 <pre><code>[]</code></pre></li>
+<h3>Example configuration</h3>
+<pre><code>
+{
+    "plugin": "MapVote",
+    "enabled": true,
+    "minPlayersForVote": 30,
+    "voteWaitTimeFromMatchStart": 10,
+    "voteBroadcastInterval": 7,
+    "numberRecentMapsToExlude": 4,
+    "automaticSeedingMode": true,
+    "gamemodeWhitelist": [ "AAS", "RAAS", "Invasion" ],
+    "layerLevelBlacklist": [ "BlackCoast_Seed" ]
+}
+</code></pre></li>
+
