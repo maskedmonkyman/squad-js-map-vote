@@ -147,7 +147,7 @@ export default class MapVote extends BasePlugin {
                     if (this.server.currentLayer) {
                         if (this.server.nextLayer) {
                             if (this.server.currentLayer.gamemode.toLowerCase() != "seed") {
-                                const seedingMaps = Layers.layers.filter((l) => l.layerid && l.gamemode.toUpperCase() == "SEED" && (currentNextLayerExist && l.layerid != this.server.currentLayer.layerid && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase()))))
+                                const seedingMaps = Layers.layers.filter((l) => l.layerid && l.gamemode.toUpperCase() == "SEED" && (l.layerid != this.server.currentLayer.layerid && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase()))))
                                 const rndMap = randomElement(seedingMaps);
 
                                 let rndMap2;
