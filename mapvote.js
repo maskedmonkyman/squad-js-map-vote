@@ -138,7 +138,7 @@ export default class MapVote extends BasePlugin {
     setSeedingMode() {
         // setTimeout(()=>{this.msgDirect('76561198419229279',"MV\ntest\ntest")},1000)
         // this.msgBroadcast("[MapVote] Seeding mode active")
-        if (this && this.options && this.server && this.options.automaticSeedingMode && ((this.server.nextLayer && this.server.nextLayer.gamemode.toLowerCase() != "seed") || this.server.currentLayer.layerid == this.server.nextLayer.layerid)) {
+        if (this && this.options && this.server && this.options.automaticSeedingMode && ((this.server.nextLayer && this.server.nextLayer.gamemode.toLowerCase() != "seed") || (this.server.currentLayer && this.server.nextLayer && this.server.currentLayer.layerid == this.server.nextLayer.layerid))) {
             const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && l.layerid != this.server.currentLayer.layerid && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase())))
 
             const nextMap = randomElement(seedingMaps).layerid;
