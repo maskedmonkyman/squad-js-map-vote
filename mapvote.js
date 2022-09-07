@@ -125,7 +125,7 @@ export default class MapVote extends BasePlugin {
             this.nominations = [];
             this.factionStrings = [];
             setTimeout(this.beginVoting, toMils(this.options.voteWaitTimeFromMatchStart));
-            // setTimeout(() => { this.setSeedingMode() }, 20000);
+            setTimeout(() => this.setSeedingMode(true), 10000);
         }, 10000)
     }
 
@@ -136,7 +136,7 @@ export default class MapVote extends BasePlugin {
         this.updateNextMap();
     }
 
-    setSeedingMode() {
+    setSeedingMode(isNewGameEvent = false) {
         // setTimeout(()=>{this.msgDirect('76561198419229279',"MV\ntest\ntest")},1000)
         // this.msgBroadcast("[MapVote] Seeding mode active")
         const baseDataExist = this && this.options && this.server && this.server.players;
@@ -159,7 +159,7 @@ export default class MapVote extends BasePlugin {
                                     this.verbose(1, 'Going into seeding mode.');
                                     this.server.rcon.execute(`AdminChangeLayer ${newCurrentMap}`);
                                 }
-                                if (this.server.players.length < 20 && this.server.nextLayer.gamemode.toLowerCase() != "seed") {
+                                if (isNewGameEvent && this.server.players.length < 20 && this.server.nextLayer.gamemode.toLowerCase() != "seed") {
                                     const newNextMap = rndMap2.layerid;
                                     this.server.rcon.execute(`AdminSetNextLayer ${newNextMap}`);
                                 }
