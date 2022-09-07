@@ -94,6 +94,7 @@ export default class MapVote extends BasePlugin {
         this.onChatMessage = this.onChatMessage.bind(this);
         this.broadcastNominations = this.broadcastNominations.bind(this);
         this.beginVoting = this.beginVoting.bind(this);
+        this.setSeedingMode = this.setSeedingMode.bind(this);
 
         this.broadcast = (msg) => { this.server.rcon.broadcast(msg); };
         this.warn = (steamid, msg) => { this.server.rcon.warn(steamid, msg); };
@@ -103,9 +104,9 @@ export default class MapVote extends BasePlugin {
         this.server.on('NEW_GAME', this.onNewGame);
         this.server.on('CHAT_MESSAGE', this.onChatMessage);
         this.server.on('PLAYER_DISCONNECTED', this.onPlayerDisconnected);
+        this.server.on('PLAYER_CONNECTED', this.setSeedingMode);
         this.verbose(1, 'Map vote was mounted.');
         this.verbose(1, "Blacklisted Layers/Levels: " + this.options.layerLevelBlacklist.join(', '))
-        this.setSeedingMode();
     }
 
     async unmount() {
@@ -124,7 +125,7 @@ export default class MapVote extends BasePlugin {
             this.nominations = [];
             this.factionStrings = [];
             setTimeout(this.beginVoting, toMils(this.options.voteWaitTimeFromMatchStart));
-            setTimeout(() => { this.setSeedingMode() }, 20000);
+            // setTimeout(() => { this.setSeedingMode() }, 20000);
         }, 10000)
     }
 
@@ -138,24 +139,36 @@ export default class MapVote extends BasePlugin {
     setSeedingMode() {
         // setTimeout(()=>{this.msgDirect('76561198419229279',"MV\ntest\ntest")},1000)
         // this.msgBroadcast("[MapVote] Seeding mode active")
-        let tries = 0;
-        let error = false;
-        const baseDataExist = this && this.options && this.server;
-        const currentNextLayerExist = this.server.currentLayer && this.server.nextLayer;
-        if (baseDataExist && this.options.automaticSeedingMode && ((this.server.nextLayer && this.server.nextLayer.gamemode.toLowerCase() != "seed") || (currentNextLayerExist && this.server.currentLayer.layerid == this.server.nextLayer.layerid))) {
-            const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && (currentNextLayerExist && l.layerid != this.server.currentLayer.layerid && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase()))))
-            do {
-                error = false;
-                const rndMap = randomElement(seedingMaps);
-                if (rndMap && rndMap.layerid) {
-                    const nextMap = rndMap.layerid;
-                    if (this.server.players && this.server.players.length < 20) {
-                        this.verbose(1, 'Going into seeding mode.');
-                        this.server.rcon.execute(`AdminSetNextLayer ${nextMap}`);
-                    }
-                } else error = true;
-            } while (error && ++tries <= 5)
-        }
+        const baseDataExist = this && this.options && this.server && this.server.players;
+        if (baseDataExist) {
+            this.verbose(1, "Checking seeding mode");
+            if (this.options.automaticSeedingMode) {
+                if (this.server.players.length >= 1 && this.server.players.length < 40) {
+                    if (this.server.currentLayer) {
+                        if (this.server.nextLayer) {
+                            if (this.server.currentLayer.gamemode.toLowerCase() != "seed") {
+                                const seedingMaps = Layers.layers.filter((l) => l.layerid && l.gamemode.toUpperCase() == "SEED" && (currentNextLayerExist && l.layerid != this.server.currentLayer.layerid && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase()))))
+                                const rndMap = randomElement(seedingMaps);
+
+                                let rndMap2;
+                                do rndMap2 = randomElement(seedingMaps);
+                                while (rndMap2.layerid == rndMap.layerid)
+
+                                if (this.server.players.length <= 5) {
+                                    const newCurrentMap = rndMap.layerid;
+                                    this.verbose(1, 'Going into seeding mode.');
+                                    this.server.rcon.execute(`AdminChangeLayer ${newCurrentMap}`);
+                                }
+                                if (this.server.players.length < 20 && this.server.nextLayer.gamemode.toLowerCase() != "seed") {
+                                    const newNextMap = rndMap2.layerid;
+                                    this.server.rcon.execute(`AdminSetNextLayer ${newNextMap}`);
+                                }
+                            }
+                        } else this.verbose(1, "Bad data (nextLayer). Seeding mode for next layer skipped to prevent errors.");
+                    } else this.verbose(1, "Bad data (currentLayer). Seeding mode skipped to prevent errors.");
+                } else this.verbose(1, "Player count doesn't allow seeding mode");
+            } else this.verbose(1, "Seeding mode disabled in config");
+        } else console.log("[MapVote][1] Bad data (this/this.server/this.options). Seeding mode skipped to prevent errors.");
     }
 
     async onChatMessage(info) {
