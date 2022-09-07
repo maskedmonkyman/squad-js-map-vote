@@ -138,16 +138,22 @@ export default class MapVote extends BasePlugin {
     setSeedingMode() {
         // setTimeout(()=>{this.msgDirect('76561198419229279',"MV\ntest\ntest")},1000)
         // this.msgBroadcast("[MapVote] Seeding mode active")
+        let tries = 0;
+        let error = false;
         const baseDataExist = this && this.options && this.server;
         const currentNextLayerExist = this.server.currentLayer && this.server.nextLayer;
         if (baseDataExist && this.options.automaticSeedingMode && ((this.server.nextLayer && this.server.nextLayer.gamemode.toLowerCase() != "seed") || (currentNextLayerExist && this.server.currentLayer.layerid == this.server.nextLayer.layerid))) {
             const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && (currentNextLayerExist && l.layerid != this.server.currentLayer.layerid && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase()))))
-
-            const nextMap = randomElement(seedingMaps).layerid;
-            if (this.server.players && this.server.players.length < 20) {
-                this.verbose(1, 'Going into seeding mode.');
-                this.server.rcon.execute(`AdminSetNextLayer ${nextMap}`);
-            }
+            const rndMap = randomElement(seedingMaps);
+            do {
+                if (rndMap.layerid) {
+                    const nextMap = rndMap.layerid;
+                    if (this.server.players && this.server.players.length < 20) {
+                        this.verbose(1, 'Going into seeding mode.');
+                        this.server.rcon.execute(`AdminSetNextLayer ${nextMap}`);
+                    }
+                }else error = true;
+            } while (error && ++tries<=5)
         }
     }
 
