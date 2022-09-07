@@ -146,7 +146,7 @@ export default class MapVote extends BasePlugin {
             const seedingMaps = Layers.layers.filter((l) => l.gamemode.toUpperCase() == "SEED" && (currentNextLayerExist && l.layerid != this.server.currentLayer.layerid && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase()))))
             do {
                 const rndMap = randomElement(seedingMaps);
-                if (rndMap.layerid) {
+                if (rndMap && rndMap.layerid) {
                     const nextMap = rndMap.layerid;
                     if (this.server.players && this.server.players.length < 20) {
                         this.verbose(1, 'Going into seeding mode.');
