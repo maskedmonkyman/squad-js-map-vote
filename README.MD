@@ -57,7 +57,7 @@ The broadcast interval for vote notification in mins.
 ```
 #### automaticSeedingMode
 ###### Description
-Set a seeding layer if server has less than 20 players.
+Instantly change to a seeding layer if server has less than 5 players and set next layer to a seeding layer if server has less than 20 players.
 ###### Default
 ```json
 true
