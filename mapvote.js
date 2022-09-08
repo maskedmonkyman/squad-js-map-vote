@@ -355,7 +355,7 @@ export default class MapVote extends BasePlugin {
 
     //checks if there are enough players to start voting, if not binds itself to player connected
     //when there are enough players it clears old votes, sets up new nominations, and starts broadcast
-    beginVoting(force = false, steamid = null, cmdLayers = null) {
+    beginVoting(force = false, steamid = null, cmdLayers = []) {
         this.verbose(1, "Starting vote")
         const playerCount = this.server.players.length;
         const minPlayers = this.options.minPlayersForVote;
@@ -431,7 +431,7 @@ export default class MapVote extends BasePlugin {
             strMsg += (steamID, formatChoice(choice, this.nominations[ choice ], this.tallies[ choice ])) + "\n";
         }
         strMsg.trim();
-        this.warn(steamID, strMsg)
+        if(steamID) this.warn(steamID, strMsg)
 
         // const winners = this.currentWinners;
         // await this.msgDirect(steamID, `Current winner${winners.length > 1 ? "s" : ""}: ${winners.join(", ")}`);
