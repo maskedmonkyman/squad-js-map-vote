@@ -101,6 +101,7 @@ export default class MapVote extends BasePlugin {
     }
 
     async mount() {
+        this.options.gamemodeWhitelist.forEach((e, k, a) => a[ k ] = e.toUpperCase());
         this.server.on('NEW_GAME', this.onNewGame);
         this.server.on('CHAT_MESSAGE', this.onChatMessage);
         this.server.on('PLAYER_DISCONNECTED', this.onPlayerDisconnected);
@@ -306,21 +307,23 @@ export default class MapVote extends BasePlugin {
         this.factionStrings = [];
         let rnd_layers = [];
         // let rnd_layers = [];
+        const sanitizedLayers = Layers.layers.filter((l) => l.layerid);
         if (!cmdLayers || cmdLayers.length == 0) {
-            this.options.gamemodeWhitelist.forEach((e, k, a) => a[ k ] = e.toUpperCase());
 
             const recentlyPlayedMaps = this.objArrToValArr(this.server.layerHistory.splice(0, this.options.numberRecentMapsToExlude), "layer", "map", "name");
-            this.verbose(1, recentlyPlayedMaps.join(', '))
-            const all_layers = Layers.layers.filter((l) => this.options.gamemodeWhitelist.includes(l.gamemode.toUpperCase()) && ![ this.server.currentLayer.map.name, ...recentlyPlayedMaps ].includes(l.map.name) && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase())));
+            this.verbose(1, "Recently played maps: " + recentlyPlayedMaps.join(', '))
+            const all_layers = sanitizedLayers.filter((l) => this.options.gamemodeWhitelist.includes(l.gamemode.toUpperCase()) && ![ this.server.currentLayer.map.name, ...recentlyPlayedMaps ].includes(l.map.name) && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase())));
             for (let i = 0; i < 6; i++) {
-                let l;
-                do l = randomElement(all_layers); while (rnd_layers.includes(l))
-                rnd_layers.push(l);
-                this.nominations.push(l.layerid)
-                this.tallies.push(0);
-                this.factionStrings.push(getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]));
+                let l, maxtries = 10;
+                do l = randomElement(all_layers); while (rnd_layers.find(lf => lf.layerid == l.layerid) && --maxtries == 0)
+                if (maxtries > 0) {
+                    rnd_layers.push(l);
+                    this.nominations.push(l.layerid)
+                    this.tallies.push(0);
+                    this.factionStrings.push(getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]));
+                }
             }
-            if (!bypassRaasFilter && rnd_layers.filter((l) => l.gamemode === 'RAAS').length < 3) this.populateNominations();
+            if (!bypassRaasFilter && rnd_layers.filter((l) => l.gamemode === 'RAAS' && this.options.gamemodeWhitelist.includes("RAAS")).length < 3) this.populateNominations();
         } else {
             if (cmdLayers.length == 1 && cmdLayers[ 0 ].split('_')[ 0 ] == "*") for (let i = 0; i < 5; i++) cmdLayers.push(cmdLayers[ 0 ])
             if (cmdLayers.length <= 6)
