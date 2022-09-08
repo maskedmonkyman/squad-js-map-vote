@@ -329,7 +329,7 @@ export default class MapVote extends BasePlugin {
             if (cmdLayers.length <= 6)
                 for (let cl of cmdLayers) {
                     const cls = cl.split('_');
-                    const fLayers = Layers.layers.filter((l) => ((cls[ 0 ] == "*" || l.classname.toLowerCase().startsWith(cls[ 0 ])) && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
+                    const fLayers = sanitizedLayers.filter((l) => ((cls[ 0 ] == "*" || l.classname.toLowerCase().startsWith(cls[ 0 ])) && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
                     let l;
                     do l = randomElement(fLayers); while (rnd_layers.includes(l))
                     if (l) {
