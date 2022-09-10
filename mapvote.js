@@ -312,7 +312,7 @@ export default class MapVote extends BasePlugin {
 
             const recentlyPlayedMaps = this.objArrToValArr(this.server.layerHistory.splice(0, this.options.numberRecentMapsToExlude), "layer", "map", "name");
             this.verbose(1, "Recently played maps: " + recentlyPlayedMaps.join(', '))
-            const all_layers = sanitizedLayers.filter((l) => this.options.gamemodeWhitelist.includes(l.gamemode.toUpperCase()) && (!this.server.currentLayer || ![ this.server.currentLayer.map.name, ...recentlyPlayedMaps ].includes(l.map.name)) && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase())));
+            const all_layers = sanitizedLayers.filter((l) => l.layerid && l.map && this.options.gamemodeWhitelist.includes(l.gamemode.toUpperCase()) && (![ this.server.currentLayer.map.name, ...recentlyPlayedMaps ].includes(l.map.name)) && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase())));
             for (let i = 0; i < 6; i++) {
                 let l, maxtries = 10;
                 do l = randomElement(all_layers); while (rnd_layers.find(lf => lf.layerid == l.layerid) && --maxtries == 0)
