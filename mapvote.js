@@ -145,28 +145,30 @@ export default class MapVote extends BasePlugin {
             this.verbose(1, "Checking seeding mode");
             if (this.options.automaticSeedingMode) {
                 if (this.server.players.length >= 1 && this.server.players.length < 40) {
+                    const seedingMaps = Layers.layers.filter((l) => l.layerid && l.gamemode.toUpperCase() == "SEED" && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase())))
                     if (this.server.currentLayer) {
-                        if (this.server.nextLayer) {
-                            if (this.server.currentLayer.gamemode.toLowerCase() != "seed") {
-                                const seedingMaps = Layers.layers.filter((l) => l.layerid && l.gamemode.toUpperCase() == "SEED" && (l.layerid != this.server.currentLayer.layerid && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase()))))
-                                const rndMap = randomElement(seedingMaps);
+                        const rndMap = randomElement(seedingMaps);
+                        if (this.server.currentLayer.gamemode.toLowerCase() != "seed") {
+                            if (this.server.players.length <= 5) {
+                                const newCurrentMap = rndMap.layerid;
+                                this.verbose(1, 'Going into seeding mode.');
+                                this.server.rcon.execute(`AdminChangeLayer ${newCurrentMap}`);
+                            }
 
+                            if (this.server.nextLayer) {
+                                const nextMaps = seedingMaps.filter((l) => l.layerid != this.server.currentLayer.layerid)
                                 let rndMap2;
-                                do rndMap2 = randomElement(seedingMaps);
+                                do rndMap2 = randomElement(nextMaps);
                                 while (rndMap2.layerid == rndMap.layerid)
 
-                                if (this.server.players.length <= 5) {
-                                    const newCurrentMap = rndMap.layerid;
-                                    this.verbose(1, 'Going into seeding mode.');
-                                    this.server.rcon.execute(`AdminChangeLayer ${newCurrentMap}`);
-                                }
                                 if (isNewGameEvent && this.server.players.length < 20 && this.server.nextLayer.gamemode.toLowerCase() != "seed") {
                                     const newNextMap = rndMap2.layerid;
                                     this.server.rcon.execute(`AdminSetNextLayer ${newNextMap}`);
                                 }
-                            }
-                        } else this.verbose(1, "Bad data (nextLayer). Seeding mode for next layer skipped to prevent errors.");
+                            } else this.verbose(1, "Bad data (nextLayer). Seeding mode for next layer skipped to prevent errors.");
+                        }
                     } else this.verbose(1, "Bad data (currentLayer). Seeding mode skipped to prevent errors.");
+
                 } else this.verbose(1, "Player count doesn't allow seeding mode");
             } else this.verbose(1, "Seeding mode disabled in config");
         } else console.log("[MapVote][1] Bad data (this/this.server/this.options). Seeding mode skipped to prevent errors.");
