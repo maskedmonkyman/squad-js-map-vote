@@ -4,6 +4,7 @@ import BasePlugin from "./base-plugin.js";
 
 import fs from "fs";
 import { Layers } from "../layers/index.js"
+import axios from "axios"
 
 function randomElement(array) {
     return array[ Math.floor(Math.random() * array.length) ];
@@ -34,6 +35,11 @@ export default class MapVote extends BasePlugin {
                 required: false,
                 description: "command name to use in chat",
                 default: "!vote"
+            },
+            automaticVoteStart: {
+                required: false,
+                description: "a map vote will automatically start after a new match if set to true",
+                default: true
             },
             minPlayersForVote:
             {
@@ -108,6 +114,8 @@ export default class MapVote extends BasePlugin {
         this.server.on('PLAYER_CONNECTED', this.setSeedingMode);
         this.verbose(1, 'Map vote was mounted.');
         this.verbose(1, "Blacklisted Layers/Levels: " + this.options.layerLevelBlacklist.join(', '))
+        await this.checkUpdates();
+        // console.log("mapvote removeEventListener", this.server)
     }
 
     async unmount() {
@@ -125,7 +133,7 @@ export default class MapVote extends BasePlugin {
             this.tallies = [];
             this.nominations = [];
             this.factionStrings = [];
-            setTimeout(this.beginVoting, toMils(this.options.voteWaitTimeFromMatchStart));
+            if (this.options.automaticVoteStart) setTimeout(this.beginVoting, toMils(this.options.voteWaitTimeFromMatchStart));
             setTimeout(() => this.setSeedingMode(true), 10000);
         }, 10000)
     }
@@ -135,6 +143,89 @@ export default class MapVote extends BasePlugin {
         await this.server.updatePlayerList();
         this.clearVote();
         this.updateNextMap();
+    }
+    async checkUpdates(callback) {
+        const versionN = "1.0.0"
+        let releasesUrl = "https://api.github.com/repos/fantinodavide/squad-js-map-vote/releases";
+        let curDate = new Date();
+        console.log("Current version: ", versionN, "\n > Checking for updates", curDate.toLocaleString());
+        axios
+            .get(releasesUrl)
+            .then(res => {
+                const gitResData = res.data[ 0 ];
+                const checkV = gitResData.tag_name.toUpperCase().replace("V", "").split(".");
+                const versionSplit = versionN.toString().split(".");
+
+                const config_authorized_update = true;//((config.other.install_beta_versions && gitResData.prerelease) || !gitResData.prerelease);
+                const major_version_update = (parseInt(versionSplit[ 0 ]) < parseInt(checkV[ 0 ]));
+                const minor_version_update = (parseInt(versionSplit[ 0 ]) <= parseInt(checkV[ 0 ]) && parseInt(versionSplit[ 1 ]) < parseInt(checkV[ 1 ]));
+                const patch_version_update = (parseInt(versionSplit[ 0 ]) <= parseInt(checkV[ 0 ]) && parseInt(versionSplit[ 1 ]) <= parseInt(checkV[ 1 ]) && parseInt(versionSplit[ 2 ]) < parseInt(checkV[ 2 ]));
+
+                if (config_authorized_update && (major_version_update || minor_version_update || patch_version_update)) {
+                    console.log(" > Update found: " + gitResData.tag_name, gitResData.name);
+                    //if (updateFoundCallback) updateFoundCallback();
+                    // server.close();
+                    if (downloadInstallUpdate) downloadLatestUpdate(gitResData);
+                    else if (callback) callback();
+                } else {
+                    console.log(" > No updates found");
+                    if (callback) callback();
+                }
+            })
+            .catch(err => {
+                console.error(" > Couldn't check for updates. Proceding startup", err);
+                if (callback) callback();
+            })
+    }
+    downloadLatestUpdate(gitResData) {
+        // const url = gitResData.zipball_url;
+        const url = gitResData.zipball_url;
+        console.log(" > Downloading update: " + gitResData.tag_name, gitResData.name, url);
+        const dwnDir = path.resolve(__dirname, 'tmp_update');//, 'gitupd.zip')
+        const dwnFullPath = path.resolve(dwnDir, 'gitupd.zip')
+
+        if (!fs.existsSync(dwnDir)) fs.mkdirSync(dwnDir);
+
+        const writer = fs.createWriteStream(dwnFullPath)
+        axios({
+            method: "get",
+            url: url,
+            responseType: "stream"
+        }).then((response) => {
+            response.data.pipe(writer);
+        });
+
+        writer.on('finish', (res) => {
+            setTimeout(() => {
+                installLatestUpdate(dwnDir, dwnFullPath, gitResData);
+            }, 1000)
+        })
+        writer.on('error', (err) => {
+            console.error(err);
+        })
+    }
+    installLatestUpdate(dwnDir, dwnFullPath, gitResData) {
+        const zip = new StreamZip({
+            file: dwnFullPath,
+            storeEntries: true,
+            skipEntryNameValidation: true
+        });
+        zip.on('ready', () => {
+            fs.remove(__dirname + "/dist", () => {
+                zip.extract("release/", __dirname, (err, res) => {
+                    zip.close();
+                    nrc.run('npm install');
+                    console.log(" > Extracted", res, "files");
+                    fs.remove(dwnDir, () => {
+                        console.log(`${dwnDir} folder deleted`);
+                        const restartTimeout = 5000;
+                        console.log(" > Restart in", restartTimeout / 1000, "seconds");
+                        restartProcess(restartTimeout);
+                    })
+                });
+            })
+
+        });
     }
 
     setSeedingMode(isNewGameEvent = false) {
@@ -146,7 +237,7 @@ export default class MapVote extends BasePlugin {
             if (this.options.automaticSeedingMode) {
                 if (this.server.players.length >= 1 && this.server.players.length < 40) {
                     const seedingMaps = Layers.layers.filter((l) => l.layerid && l.gamemode.toUpperCase() == "SEED" && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase())))
-                    
+
                     if (this.server.currentLayer) {
                         const rndMap = randomElement(seedingMaps);
                         if (this.server.currentLayer.gamemode.toLowerCase() != "seed") {
@@ -157,7 +248,7 @@ export default class MapVote extends BasePlugin {
                             }
                         }
                     } else this.verbose(1, "Bad data (currentLayer). Seeding mode for current layer skipped to prevent errors.");
-                    
+
                     if (this.server.nextLayer) {
                         const nextMaps = seedingMaps.filter((l) => (!this.server.currentLayer || l.layerid != this.server.currentLayer.layerid))
                         let rndMap2;
