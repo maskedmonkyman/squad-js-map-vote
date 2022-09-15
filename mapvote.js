@@ -365,7 +365,10 @@ export default class MapVote extends BasePlugin {
         let cpyWinners = this.currentWinners;
         let skipSetNextMap = false;
         if (cpyWinners.find(e => e == this.nominations[ 0 ])) {
-            if (cpyWinners.length > 1) delete cpyWinners[ cpyWinners.indexOf(this.nominations[ 0 ]).filter(e => e != null) ]
+            if (cpyWinners.length > 1) {
+                delete cpyWinners[ cpyWinners.indexOf(this.nominations[ 0 ]) ]
+                cpyWinners = cpyWinners.filter(e => e != null)
+            }
             else {
                 skipSetNextMap = true;
                 if (this.newVoteTimeout == null) {
