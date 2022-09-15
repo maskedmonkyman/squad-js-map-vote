@@ -291,7 +291,7 @@ export default class MapVote extends BasePlugin {
         if (!isNaN(subCommand)) // if this succeeds player is voting for a map
         {
             const mapNumber = parseInt(subCommand); //try to get a vote number
-            if (this.nominations[mapNumber]) {
+            if (this.nominations[ mapNumber ]) {
                 if (!this.votingEnabled) {
                     await this.warn(steamID, "There is no vote running right now");
                     return;
@@ -375,7 +375,7 @@ export default class MapVote extends BasePlugin {
                             this.endVoting()
                             this.beginVoting(true)
                         }
-                    }, 5000)
+                    }, 2 * 60 * 1000)
                 }
             }
         }
@@ -452,8 +452,14 @@ export default class MapVote extends BasePlugin {
             }
             if (!bypassRaasFilter && rnd_layers.filter((l) => l.gamemode === 'RAAS' && this.options.gamemodeWhitelist.includes("RAAS")).length < 3) this.populateNominations();
         } else {
-            if (cmdLayers.length == 1 && cmdLayers[ 0 ].split('_')[ 0 ] == "*") for (let i = 0; i < 5; i++) cmdLayers.push(cmdLayers[ 0 ])
-            if (cmdLayers.length <= 6)
+            const maxOptions = this.options.showRerollOption ? 5 : 6;
+            let singleGamemodeVote = false;
+            if (cmdLayers.length == 1 && cmdLayers[ 0 ].split('_')[ 0 ] == "*") {
+                singleGamemodeVote = true;
+                for (let i = 0; i < maxOptions; i++) cmdLayers.push(cmdLayers[ 0 ])
+            }
+            if (singleGamemodeVote || cmdLayers.length <= maxOptions) {
+                let i = 1;
                 for (let cl of cmdLayers) {
                     const cls = cl.split('_');
                     const fLayers = sanitizedLayers.filter((l) => ((cls[ 0 ] == "*" || l.layerid.toLowerCase().startsWith(cls[ 0 ])) && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
@@ -464,16 +470,23 @@ export default class MapVote extends BasePlugin {
                         this.nominations[ i ] = l.layerid
                         this.tallies[ i ] = 0;
                         this.factionStrings[ i ] = getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]);
+                        i++;
                     }
                 }
-            else if (steamid) this.warn(steamid, "You cannot start a vote with more than 6 options"); return;
+            }
+            else if (steamid) {
+                this.warn(steamid, "You cannot start a vote with more than " + maxOptions + " options");
+                return;
+            }
         }
 
         if (this.options.showRerollOption) {
-            this.nominations.splice(5, 1);
-            this.tallies.splice(5, 1);
-            this.factionStrings.splice(5, 1);
-            this.nominations[ 0 ] = "Reroll vote list"
+            if (this.nominations.length > 5) {
+                this.nominations.splice(5, 1);
+                this.tallies.splice(5, 1);
+                this.factionStrings.splice(5, 1);
+            }
+            this.nominations[ 0 ] = "Reroll vote list with random options"
             this.tallies[ 0 ] = 0;
             this.factionStrings[ 0 ] = "";
         }
@@ -526,6 +539,8 @@ export default class MapVote extends BasePlugin {
     endVoting() {
         this.votingEnabled = false;
         clearInterval(this.broadcastIntervalTask);
+        clearTimeout(this.newVoteTimeout);
+        this.newVoteTimeout = null;
         this.broadcastIntervalTask = null;
     }
     objArrToValArr(arr, ...key) {
@@ -589,7 +604,7 @@ export default class MapVote extends BasePlugin {
         this.tallies[ nominationIndex ] += 1;
         if (previousVote !== undefined)
             this.tallies[ previousVote ] -= 1;
-        await this.warn(steamID, `Registered vote: ${this.nominations[ nominationIndex ].replace(/\_/gi, ' ').replace(/\sv\d{1,2}/gi, '')} ${this.factionStrings[ nominationIndex ]} (${this.tallies[ nominationIndex ]} votes)`);
+        await this.warn(steamID, `Registered vote: ${this.nominations[ nominationIndex ].replace(/\_/gi, ' ').replace(/\sv\d{1,2}/gi, '')} ${this.factionStrings[ nominationIndex ]} ` + (this.options.hideVotesCount ? `` : `(${this.tallies[ nominationIndex ]} votes)`));
         // await this.msgDirect(steamID, `Registered vote`);// ${this.nominations[ nominationIndex ]} ${this.factionStrings[ nominationIndex ]} (${this.tallies[ nominationIndex ]} votes)`);
         // await this.msgDirect(steamID, `${this.nominations[ nominationIndex ]} (${this.tallies[ nominationIndex ]} votes)`);
         // await this.msgDirect(steamID, `${this.factionStrings[ nominationIndex ]}`);
