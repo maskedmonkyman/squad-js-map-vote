@@ -82,12 +82,12 @@ export default class MapVote extends BasePlugin {
             },
             hideVotesCount: {
                 required: false,
-                description: 'hides the number of votes a layer received',
+                description: 'hides the number of votes a layer received in broadcast message',
                 default: false
             },
             showRerollOption: {
                 required: false,
-                description: 'vote option to restart the vote',
+                description: 'vote option to restart the vote with random entries',
                 default: false
             }
         };

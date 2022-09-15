@@ -83,6 +83,20 @@ The random layer list will not include the blacklisted layers or levels. (accept
 ```
 []
 ```
+#### hideVotesCount
+###### Description
+Hides the number of votes a layer received in broadcast message.
+###### Default
+```json
+false
+```
+#### showRerollOption
+###### Description
+vote option to restart the vote with random entries.
+###### Default
+```json
+false
+```
 ### Example configuration
 ```json
 {
@@ -94,6 +108,8 @@ The random layer list will not include the blacklisted layers or levels. (accept
     "numberRecentMapsToExlude": 4,
     "automaticSeedingMode": true,
     "gamemodeWhitelist": [ "AAS", "RAAS", "Invasion" ],
-    "layerLevelBlacklist": [ "BlackCoast_Seed" ]
+    "layerLevelBlacklist": [ "BlackCoast_Seed" ],
+    "hideVotesCount": false,
+    "showRerollOption": false
 }
 ```
