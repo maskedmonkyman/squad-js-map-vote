@@ -11,7 +11,7 @@ function randomElement(array) {
 }
 
 function formatChoice(choiceIndex, mapString, currentVotes, firstBroadcast) {
-    return `${choiceIndex + 1}➤ ${mapString} ` + (!firstBroadcast ? `(${currentVotes})` : "");
+    return `${choiceIndex}➤ ${mapString} ` + (!firstBroadcast ? `(${currentVotes})` : "");
     // return `${choiceIndex + 1}❱ ${mapString} (${currentVotes} votes)`
 }
 
@@ -79,6 +79,16 @@ export default class MapVote extends BasePlugin {
                 required: false,
                 description: 'random layer list will not include the blacklisted layers or levels. (acceptable formats: Gorodok/Gorodok_RAAS/Gorodok_AAS_v1)',
                 default: []
+            },
+            hideVotesCount: {
+                required: false,
+                description: 'hides the number of votes a layer received',
+                default: false
+            },
+            showRerollOption: {
+                required: false,
+                description: 'vote option to restart the vote',
+                default: false
             }
         };
     }
@@ -94,6 +104,7 @@ export default class MapVote extends BasePlugin {
         this.onConnectBound = false;
         this.broadcastIntervalTask = null;
         this.firstBroadcast = true;
+        this.newVoteTimeout = null;
 
         this.onNewGame = this.onNewGame.bind(this);
         this.onPlayerDisconnected = this.onPlayerDisconnected.bind(this);
@@ -114,7 +125,7 @@ export default class MapVote extends BasePlugin {
         this.server.on('PLAYER_CONNECTED', this.setSeedingMode);
         this.verbose(1, 'Map vote was mounted.');
         this.verbose(1, "Blacklisted Layers/Levels: " + this.options.layerLevelBlacklist.join(', '))
-        await this.checkUpdates();
+        // await this.checkUpdates();
         // console.log("mapvote removeEventListener", this.server)
     }
 
@@ -280,12 +291,15 @@ export default class MapVote extends BasePlugin {
         if (!isNaN(subCommand)) // if this succeeds player is voting for a map
         {
             const mapNumber = parseInt(subCommand); //try to get a vote number
-            if (!this.votingEnabled) {
-                await this.warn(steamID, "There is no vote running right now");
-                return;
-            }
-            await this.registerVote(steamID, mapNumber, playerName);
-            this.updateNextMap();
+            if (this.nominations[mapNumber]) {
+                if (!this.votingEnabled) {
+                    await this.warn(steamID, "There is no vote running right now");
+                    return;
+                }
+                await this.registerVote(steamID, mapNumber, playerName);
+                this.updateNextMap();
+            } else
+                await this.warn(steamID, "Please vote a valid option");
             return;
         }
 
@@ -348,8 +362,27 @@ export default class MapVote extends BasePlugin {
 
     updateNextMap() //sets next map to current mapvote winner, if there is a tie will pick at random
     {
-        const nextMap = randomElement(this.currentWinners);
-        this.server.rcon.execute(`AdminSetNextLayer ${nextMap}`);
+        let cpyWinners = this.currentWinners;
+        let skipSetNextMap = false;
+        if (cpyWinners.find(e => e == this.nominations[ 0 ])) {
+            if (cpyWinners.length > 1) delete cpyWinners[ cpyWinners.indexOf(this.nominations[ 0 ]).filter(e => e != null) ]
+            else {
+                skipSetNextMap = true;
+                if (this.newVoteTimeout == null) {
+                    this.newVoteTimeout = setTimeout(() => {
+                        if (this.currentWinners.find(e => e == this.nominations[ 0 ]) && this.currentWinners.length == 1) {
+                            this.newVoteTimeout = null;
+                            this.endVoting()
+                            this.beginVoting(true)
+                        }
+                    }, 5000)
+                }
+            }
+        }
+        if (!skipSetNextMap) {
+            const nextMap = randomElement(cpyWinners);
+            this.server.rcon.execute(`AdminSetNextLayer ${nextMap}`);
+        }
     }
 
     matchLayers(builtString) {
@@ -407,14 +440,14 @@ export default class MapVote extends BasePlugin {
             const recentlyPlayedMaps = this.objArrToValArr(this.server.layerHistory.splice(0, this.options.numberRecentMapsToExlude), "layer", "map", "name");
             this.verbose(1, "Recently played maps: " + recentlyPlayedMaps.join(', '))
             const all_layers = sanitizedLayers.filter((l) => l.layerid && l.map && this.options.gamemodeWhitelist.includes(l.gamemode.toUpperCase()) && (![ this.server.currentLayer ? this.server.currentLayer.map.name : null, ...recentlyPlayedMaps ].includes(l.map.name)) && !this.options.layerLevelBlacklist.find((fl) => l.layerid.toLowerCase().startsWith(fl.toLowerCase())));
-            for (let i = 0; i < 6; i++) {
+            for (let i = 1; i <= 6; i++) {
                 let l, maxtries = 10;
                 do l = randomElement(all_layers); while (rnd_layers.find(lf => lf.layerid == l.layerid) && --maxtries == 0)
                 if (maxtries > 0) {
                     rnd_layers.push(l);
-                    this.nominations.push(l.layerid)
-                    this.tallies.push(0);
-                    this.factionStrings.push(getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]));
+                    this.nominations[ i ] = l.layerid
+                    this.tallies[ i ] = 0;
+                    this.factionStrings[ i ] = getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]);
                 }
             }
             if (!bypassRaasFilter && rnd_layers.filter((l) => l.gamemode === 'RAAS' && this.options.gamemodeWhitelist.includes("RAAS")).length < 3) this.populateNominations();
@@ -423,17 +456,26 @@ export default class MapVote extends BasePlugin {
             if (cmdLayers.length <= 6)
                 for (let cl of cmdLayers) {
                     const cls = cl.split('_');
-                    const fLayers = sanitizedLayers.filter((l) => ((cls[ 0 ] == "*" || l.classname.toLowerCase().startsWith(cls[ 0 ])) && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
+                    const fLayers = sanitizedLayers.filter((l) => ((cls[ 0 ] == "*" || l.layerid.toLowerCase().startsWith(cls[ 0 ])) && (l.gamemode.toLowerCase().startsWith(cls[ 1 ]) || (!cls[ 1 ] && [ 'RAAS', 'AAS', 'INVASION' ].includes(l.gamemode.toUpperCase()))) && (!cls[ 2 ] || l.version.toLowerCase().startsWith("v" + cls[ 2 ].replace(/v/gi, '')))));
                     let l;
                     do l = randomElement(fLayers); while (rnd_layers.includes(l))
                     if (l) {
                         rnd_layers.push(l);
-                        this.nominations.push(l.layerid)
-                        this.tallies.push(0);
-                        this.factionStrings.push(getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]));
+                        this.nominations[ i ] = l.layerid
+                        this.tallies[ i ] = 0;
+                        this.factionStrings[ i ] = getTranslation(l.teams[ 0 ]) + "-" + getTranslation(l.teams[ 1 ]);
                     }
                 }
             else if (steamid) this.warn(steamid, "You cannot start a vote with more than 6 options"); return;
+        }
+
+        if (this.options.showRerollOption) {
+            this.nominations.splice(5, 1);
+            this.tallies.splice(5, 1);
+            this.factionStrings.splice(5, 1);
+            this.nominations[ 0 ] = "Reroll vote list"
+            this.tallies[ 0 ] = 0;
+            this.factionStrings[ 0 ] = "";
         }
 
         function getTranslation(t) {
@@ -505,10 +547,12 @@ export default class MapVote extends BasePlugin {
         if (this.nominations.length > 0 && this.votingEnabled) {
             await this.broadcast("✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!\n");
             let nominationStrings = [];
-            for (let choice in this.nominations) {
+            for (let choice = 1; choice < this.nominations.length; choice++) {
                 choice = Number(choice);
-                nominationStrings.push(formatChoice(choice, this.nominations[ choice ].replace(/\_/gi, ' ').replace(/\sv\d{1,2}/gi, '') + ' ' + this.factionStrings[ choice ], this.tallies[ choice ], this.firstBroadcast));
+                let vLayer = Layers.layers.find(e => e.layerid == this.nominations[ choice ]);
+                nominationStrings.push(formatChoice(choice, vLayer.map.name + ' ' + vLayer.gamemode + ' ' + this.factionStrings[ choice ], this.tallies[ choice ], (this.options.hideVotesCount || this.firstBroadcast)));
             }
+            if (this.nominations[ 0 ]) nominationStrings.push(formatChoice(0, this.nominations[ 0 ], this.tallies[ 0 ], (this.options.hideVotesCount || this.firstBroadcast)))
             await this.broadcast(nominationStrings.join("\n"));
 
             this.firstBroadcast = false;
@@ -533,7 +577,7 @@ export default class MapVote extends BasePlugin {
 
     //counts a vote from a player and adds it to tallies
     async registerVote(steamID, nominationIndex, playerName) {
-        nominationIndex -= 1; // shift indices from display range
+        // nominationIndex -= 1; // shift indices from display range
         if (nominationIndex < 0 || nominationIndex > this.nominations.length) {
             await this.warn(steamID, `[Map Vote] ${playerName}: invalid map number, typ !vote results to see map numbers`);
             return;
