@@ -647,7 +647,8 @@ export default class MapVote extends DiscordBasePlugin {
                         value: `${message}`
                     }
                 ]
-            }
+            },
+            timestamp: (new Date()).toISOString()
         });
     }
 
