@@ -1,13 +1,25 @@
 //Plugin reworked by JetDave, original version by MaskedMonkeyMan
 
-// import BasePlugin from "./base-plugin.js";
-import DiscordBasePlugin from './discord-base-plugin.js';
+import BasePlugin from "./base-plugin.js";
 
 import fs from "fs";
 import { Layers } from "../layers/index.js"
 import axios from "axios"
 
-export default class MapVote extends DiscordBasePlugin {
+function randomElement(array) {
+    return array[ Math.floor(Math.random() * array.length) ];
+}
+
+function formatChoice(choiceIndex, mapString, currentVotes, firstBroadcast) {
+    return `${choiceIndex}➤ ${mapString} ` + (!firstBroadcast ? `(${currentVotes})` : "");
+    // return `${choiceIndex + 1}❱ ${mapString} (${currentVotes} votes)`
+}
+
+function toMils(min) {
+    return min * 60 * 1000;
+}
+
+export default class MapVote extends BasePlugin {
     static get description() {
         return "Map Voting plugin";
     }
@@ -18,7 +30,6 @@ export default class MapVote extends DiscordBasePlugin {
 
     static get optionsSpecification() {
         return {
-            ...DiscordBasePlugin.optionsSpecification,
             commandPrefix:
             {
                 required: false,
@@ -78,27 +89,6 @@ export default class MapVote extends DiscordBasePlugin {
                 required: false,
                 description: 'vote option to restart the vote with random entries',
                 default: false
-            },
-            voteBroadcastMessage: {
-                required: false,
-                description: 'Message that is sent as broadcast to announce a vote',
-                default: "✯ MAPVOTE ✯\nVote for the next map by writing in chat the corresponding number!"
-            },
-            logToDiscord: {
-                required: false,
-                description: 'Enables/disables vote logging to Discord',
-                default: false
-            },
-            discordClient: {
-                required: false,
-                description: "",
-                default: "discord"
-            },
-            channelID: {
-                required: false,
-                description: 'The ID of the channel to log votes to.',
-                default: '',
-                example: '112233445566778899'
             }
         };
     }
@@ -127,7 +117,6 @@ export default class MapVote extends DiscordBasePlugin {
         this.broadcastNominations = this.broadcastNominations.bind(this);
         this.beginVoting = this.beginVoting.bind(this);
         this.setSeedingMode = this.setSeedingMode.bind(this);
-        // this.logVoteToDiscord = this.logVoteToDiscord.bind(this);
 
         this.broadcast = (msg) => { this.server.rcon.broadcast(msg); };
         this.warn = (steamid, msg) => { this.server.rcon.warn(steamid, msg); };
@@ -587,7 +576,7 @@ export default class MapVote extends DiscordBasePlugin {
     //Note: broadcast strings with multi lines are very strange
     async broadcastNominations() {
         if (this.nominations.length > 0 && this.votingEnabled) {
-            await this.broadcast(this.options.voteBroadcastMessage);
+            await this.broadcast("✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!\n");
             let nominationStrings = [];
             for (let choice = 1; choice < this.nominations.length; choice++) {
                 choice = Number(choice);
@@ -597,8 +586,6 @@ export default class MapVote extends DiscordBasePlugin {
             if (this.nominations[ 0 ]) nominationStrings.push(formatChoice(0, this.nominations[ 0 ], this.tallies[ 0 ], (this.options.hideVotesCount || this.firstBroadcast)))
             await this.broadcast(nominationStrings.join("\n"));
 
-            if (this.firstBroadcast)
-                await this.logVoteToDiscord(nominationStrings.join("\n"))
             this.firstBroadcast = false;
         }
         //const winners = this.currentWinners;
@@ -640,22 +627,6 @@ export default class MapVote extends DiscordBasePlugin {
         // await this.msgDirect(steamID, `${this.tallies[ nominationIndex ]} votes`);
     }
 
-    // async logVoteToDiscord(message) {
-    //     if (!this.options.logToDiscord) return
-    //     await this.sendDiscordMessage({
-    //         embed: {
-    //             title: 'Vote Started',
-    //             color: 16761867,
-    //             fields: [
-    //                 {
-    //                     name: 'Options:',
-    //                     value: `${message}`
-    //                 }
-    //             ]
-    //         }
-    //     });
-    // }
-
     //removes a players vote if they disconnect from the sever
     clearVote() {
         const currentPlayers = this.server.players.map((p) => p.steamID);
@@ -688,17 +659,4 @@ export default class MapVote extends DiscordBasePlugin {
 
         return ties.map(i => this.nominations[ i ]);
     }
-}
-
-function randomElement(array) {
-    return array[ Math.floor(Math.random() * array.length) ];
-}
-
-function formatChoice(choiceIndex, mapString, currentVotes, firstBroadcast) {
-    return `${choiceIndex}➤ ${mapString} ` + (!firstBroadcast ? `(${currentVotes})` : "");
-    // return `${choiceIndex + 1}❱ ${mapString} (${currentVotes} votes)`
-}
-
-function toMils(min) {
-    return min * 60 * 1000;
 }
