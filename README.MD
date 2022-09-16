@@ -101,8 +101,22 @@ false
 ###### Description
 Message that is sent as broadcast to announce a vote.
 ###### Default
+```json
+"✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!"
 ```
-✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!
+#### logToDiscord
+###### Description
+Enables/disables vote logging to Discord.
+###### Default
+```json
+false
+```
+#### channelID
+###### Description
+The ID of the channel to log votes to..
+###### Default
+```json
+"112233445566778899"
 ```
 ### Example configuration
 ```json
@@ -118,6 +132,8 @@ Message that is sent as broadcast to announce a vote.
     "layerLevelBlacklist": [ "BlackCoast_Seed" ],
     "hideVotesCount": false,
     "showRerollOption": false,
-    "voteBroadcastMessage": "✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!"
+    "voteBroadcastMessage": "✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!",
+    "logToDiscord": false,
+    "channelID": "112233445566778899"
 }
 ```

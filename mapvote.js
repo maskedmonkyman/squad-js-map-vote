@@ -98,7 +98,7 @@ export default class MapVote extends BasePlugin {
             },
             logToDiscord: {
                 required: false,
-                description: 'Log votes to Discord',
+                description: 'Enables/disables vote logging to Discord',
                 default: false
             },
             ...DiscordBasePlugin.optionsSpecification,
@@ -106,7 +106,7 @@ export default class MapVote extends BasePlugin {
                 required: false,
                 description: 'The ID of the channel to log votes to.',
                 default: '',
-                example: '667741905228136459'
+                example: '112233445566778899'
             }
         };
     }
@@ -605,7 +605,7 @@ export default class MapVote extends BasePlugin {
             await this.broadcast(nominationStrings.join("\n"));
             
             if (this.firstBroadcast)
-                await this.logVoteToDiscord(nominationStrings.join("\n"))
+                this.logVoteToDiscord(nominationStrings.join("\n"))
             this.firstBroadcast = false;
         }
         //const winners = this.currentWinners;
