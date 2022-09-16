@@ -1,4 +1,4 @@
-//Plugin by MaskedMonkeyMan
+//Plugin reworked by JetDave, original version by MaskedMonkeyMan
 
 import BasePlugin from "./base-plugin.js";
 
