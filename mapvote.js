@@ -1,6 +1,7 @@
 //Plugin reworked by JetDave, original version by MaskedMonkeyMan
 
 import BasePlugin from "./base-plugin.js";
+import DiscordBasePlugin from './discord-base-plugin.js';
 
 import fs from "fs";
 import { Layers } from "../layers/index.js"
@@ -94,6 +95,18 @@ export default class MapVote extends BasePlugin {
                 required: false,
                 description: 'Message that is sent as broadcast to announce a vote',
                 default: "✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!"
+            },
+            logToDiscord: {
+                required: false,
+                description: 'Log votes to Discord',
+                default: false
+            },
+            ...DiscordBasePlugin.optionsSpecification,
+            channelID: {
+                required: false,
+                description: 'The ID of the channel to log votes to.',
+                default: '',
+                example: '667741905228136459'
             }
         };
     }
@@ -590,7 +603,9 @@ export default class MapVote extends BasePlugin {
             }
             if (this.nominations[ 0 ]) nominationStrings.push(formatChoice(0, this.nominations[ 0 ], this.tallies[ 0 ], (this.options.hideVotesCount || this.firstBroadcast)))
             await this.broadcast(nominationStrings.join("\n"));
-
+            
+            if (this.firstBroadcast)
+                await this.logVoteToDiscord(nominationStrings.join("\n"))
             this.firstBroadcast = false;
         }
         //const winners = this.currentWinners;
@@ -663,5 +678,21 @@ export default class MapVote extends BasePlugin {
         }
 
         return ties.map(i => this.nominations[ i ]);
+    }
+
+    async logVoteToDiscord(message) {
+        if (!this.options.logToDiscord) return
+        await this.sendDiscordMessage({
+            embed: {
+                title: 'Vote Started',
+                color: 16761867,
+                fields: [
+                    {
+                        name: 'Options:',
+                        value: `${message}`
+                    }
+                ]
+            }
+        });
     }
 }
