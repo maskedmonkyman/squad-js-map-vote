@@ -123,6 +123,7 @@ The ID of the channel to log votes to..
 {
     "plugin": "MapVote",
     "enabled": true,
+    "discordClient": "discord",
     "minPlayersForVote": 30,
     "voteWaitTimeFromMatchStart": 10,
     "voteBroadcastInterval": 7,
@@ -133,7 +134,7 @@ The ID of the channel to log votes to..
     "hideVotesCount": false,
     "showRerollOption": false,
     "voteBroadcastMessage": "✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!",
-    "logToDiscord": false,
+    "logToDiscord": true,
     "channelID": "112233445566778899"
 }
 ```
