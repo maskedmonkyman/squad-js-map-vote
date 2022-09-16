@@ -105,6 +105,11 @@ export default class MapVote extends BasePlugin {
         this.broadcastIntervalTask = null;
         this.firstBroadcast = true;
         this.newVoteTimeout = null;
+        this.newVoteOptions = {
+            steamid: null,
+            cmdLayers: [],
+            bypassRaasFilter: false
+        };
 
         this.onNewGame = this.onNewGame.bind(this);
         this.onPlayerDisconnected = this.onPlayerDisconnected.bind(this);
@@ -376,9 +381,10 @@ export default class MapVote extends BasePlugin {
                         if (this.currentWinners.find(e => e == this.nominations[ 0 ]) && this.currentWinners.length == 1) {
                             this.newVoteTimeout = null;
                             this.endVoting()
-                            this.beginVoting(true)
+                            this.beginVoting(true, this.newVoteOptions.steamid, this.newVoteOptions.cmdLayers)
                         }
                     }, 2 * 60 * 1000)
+                    setTimeout(this.broadcastNominations, 1 * 60 * 1000)
                 }
             }
         }
@@ -485,13 +491,19 @@ export default class MapVote extends BasePlugin {
 
         if (this.options.showRerollOption) {
             if (this.nominations.length > 5) {
-                this.nominations.splice(5, 1);
-                this.tallies.splice(5, 1);
-                this.factionStrings.splice(5, 1);
+                this.nominations.splice(6, 1);
+                this.tallies.splice(6, 1);
+                this.factionStrings.splice(6, 1);
             }
+
+            this.newVoteOptions.steamid = steamid;
+            this.newVoteOptions.bypassRaasFilter = bypassRaasFilter;
+            this.newVoteOptions.cmdLayers = cmdLayers;
+
             this.nominations[ 0 ] = "Reroll vote list with random options"
             this.tallies[ 0 ] = 0;
             this.factionStrings[ 0 ] = "";
+
         }
 
         function getTranslation(t) {
@@ -523,7 +535,7 @@ export default class MapVote extends BasePlugin {
             return;
         }
         if (this.onConnectBound) {
-            
+
             this.server.removeEventListener("PLAYER_CONNECTED", this.beginVoting);
             this.onConnectBound = false;
         }
