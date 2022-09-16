@@ -97,6 +97,13 @@ vote option to restart the vote with random entries.
 ```json
 false
 ```
+#### voteBroadcastMessage
+###### Description
+Message that is sent as broadcast to announce a vote.
+###### Default
+```
+✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!
+```
 ### Example configuration
 ```json
 {
@@ -110,6 +117,7 @@ false
     "gamemodeWhitelist": [ "AAS", "RAAS", "Invasion" ],
     "layerLevelBlacklist": [ "BlackCoast_Seed" ],
     "hideVotesCount": false,
-    "showRerollOption": false
+    "showRerollOption": false,
+    "voteBroadcastMessage": "✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!"
 }
 ```

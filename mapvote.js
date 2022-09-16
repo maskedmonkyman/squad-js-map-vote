@@ -89,6 +89,11 @@ export default class MapVote extends BasePlugin {
                 required: false,
                 description: 'vote option to restart the vote with random entries',
                 default: false
+            },
+            voteBroadcastMessage: {
+                required: false,
+                description: 'Message that is sent as broadcast to announce a vote',
+                default: "✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!"
             }
         };
     }
@@ -576,7 +581,7 @@ export default class MapVote extends BasePlugin {
     //Note: broadcast strings with multi lines are very strange
     async broadcastNominations() {
         if (this.nominations.length > 0 && this.votingEnabled) {
-            await this.broadcast("✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!\n");
+            await this.broadcast(this.options.voteBroadcastMessage);
             let nominationStrings = [];
             for (let choice = 1; choice < this.nominations.length; choice++) {
                 choice = Number(choice);
