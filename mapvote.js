@@ -89,11 +89,6 @@ export default class MapVote extends DiscordBasePlugin {
                 description: 'Enables/disables vote logging to Discord',
                 default: false
             },
-            discordClient: {
-                required: false,
-                description: "",
-                default: "discord"
-            },
             channelID: {
                 required: false,
                 description: 'The ID of the channel to log votes to.',
@@ -127,7 +122,7 @@ export default class MapVote extends DiscordBasePlugin {
         this.broadcastNominations = this.broadcastNominations.bind(this);
         this.beginVoting = this.beginVoting.bind(this);
         this.setSeedingMode = this.setSeedingMode.bind(this);
-        // this.logVoteToDiscord = this.logVoteToDiscord.bind(this);
+        this.logVoteToDiscord = this.logVoteToDiscord.bind(this);
 
         this.broadcast = (msg) => { this.server.rcon.broadcast(msg); };
         this.warn = (steamid, msg) => { this.server.rcon.warn(steamid, msg); };
@@ -640,21 +635,21 @@ export default class MapVote extends DiscordBasePlugin {
         // await this.msgDirect(steamID, `${this.tallies[ nominationIndex ]} votes`);
     }
 
-    // async logVoteToDiscord(message) {
-    //     if (!this.options.logToDiscord) return
-    //     await this.sendDiscordMessage({
-    //         embed: {
-    //             title: 'Vote Started',
-    //             color: 16761867,
-    //             fields: [
-    //                 {
-    //                     name: 'Options:',
-    //                     value: `${message}`
-    //                 }
-    //             ]
-    //         }
-    //     });
-    // }
+    async logVoteToDiscord(message) {
+        if (!this.options.logToDiscord) return
+        await this.sendDiscordMessage({
+            embed: {
+                title: 'Vote Started',
+                color: 16761867,
+                fields: [
+                    {
+                        name: 'Options:',
+                        value: `${message}`
+                    }
+                ]
+            }
+        });
+    }
 
     //removes a players vote if they disconnect from the sever
     clearVote() {
