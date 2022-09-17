@@ -146,7 +146,7 @@ export default class MapVote extends DiscordBasePlugin {
         this.verbose(1, "Blacklisted Layers/Levels: " + this.options.layerLevelBlacklist.join(', '))
         // await this.checkUpdates();
         this.timeframeOptionOverrider();
-        setInterval(this.timeframeOptionOverrider, 5 * 60 * 1000)
+        setInterval(this.timeframeOptionOverrider, 1 * 60 * 1000)
     }
 
     async unmount() {
@@ -179,11 +179,21 @@ export default class MapVote extends DiscordBasePlugin {
         const timeNow = new Date(0, 0, 0, new Date().getHours(), new Date().getMinutes());
         const activeTimeframes = this.or_options.timeFrames.filter(tfFilter);
 
-        console.log(activeTimeframes)
+        let logTimeframe = "Active Time Frames: ";
+        let activeTfIds = [];
+        for (let atfK in activeTimeframes) {
+            const atf = activeTimeframes[ atfK ];
+            activeTfIds.push(atf.name || atf.id);
+            for(let o in atf.overrides){
+                this.options[o] = atf.overrides[o];
+            }
+        }
+        this.verbose(1, logTimeframe + activeTfIds.join(', '));
 
-        function tfFilter(tf) {
-            const tfStartSplit = [parseInt(tf.start.split(':')[0]),parseInt(tf.start.split(':')[1])];
-            const tfEndSplit = [parseInt(tf.end.split(':')[0]),parseInt(tf.end.split(':')[1])];
+        function tfFilter(tf, key, arr) {
+            arr[ key ].id = key + 1;
+            const tfStartSplit = [ parseInt(tf.start.split(':')[ 0 ]), parseInt(tf.start.split(':')[ 1 ]) ];
+            const tfEndSplit = [ parseInt(tf.end.split(':')[ 0 ]), parseInt(tf.end.split(':')[ 1 ]) ];
 
             const tfStart = new Date(0, 0, 0, ...tfStartSplit)
             const tfStart2 = new Date(0, 0, 0, 0, 0)
