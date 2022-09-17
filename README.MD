@@ -124,6 +124,7 @@ The ID of the channel to log votes to..
     "plugin": "MapVote",
     "enabled": true,
     "discordClient": "discord",
+    "automaticVoteStart": true,
     "minPlayersForVote": 30,
     "voteWaitTimeFromMatchStart": 10,
     "voteBroadcastInterval": 7,
@@ -135,6 +136,22 @@ The ID of the channel to log votes to..
     "showRerollOption": false,
     "voteBroadcastMessage": "✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!",
     "logToDiscord": true,
-    "channelID": "112233445566778899"
-}
+    "channelID": "112233445566778899",
+    "timeframes": [
+        {
+            "start": "12:00",
+            "end": "18:00",
+            "overrides": {
+                "automaticVoteStart": false
+            }
+        },
+        {
+            "start": "22:00",
+            "end": "02:00",
+            "overrides": {
+                "voteBroadcastMessage": "Late night games? Vote your favourite map!"
+            }
+        }
+    ]
+}z
 ```

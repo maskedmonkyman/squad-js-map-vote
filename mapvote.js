@@ -6,6 +6,7 @@ import DiscordBasePlugin from './discord-base-plugin.js';
 import fs from "fs";
 import { Layers } from "../layers/index.js"
 import axios from "axios"
+import { time } from 'console';
 
 export default class MapVote extends DiscordBasePlugin {
     static get description() {
@@ -94,6 +95,11 @@ export default class MapVote extends DiscordBasePlugin {
                 description: 'The ID of the channel to log votes to.',
                 default: '',
                 example: '112233445566778899'
+            },
+            timeFrames: {
+                required: false,
+                description: 'Array of timeframes to override options',
+                default: []
             }
         };
     }
@@ -115,6 +121,7 @@ export default class MapVote extends DiscordBasePlugin {
             cmdLayers: [],
             bypassRaasFilter: false
         };
+        this.or_options = { ...this.options };
 
         this.onNewGame = this.onNewGame.bind(this);
         this.onPlayerDisconnected = this.onPlayerDisconnected.bind(this);
@@ -123,6 +130,7 @@ export default class MapVote extends DiscordBasePlugin {
         this.beginVoting = this.beginVoting.bind(this);
         this.setSeedingMode = this.setSeedingMode.bind(this);
         this.logVoteToDiscord = this.logVoteToDiscord.bind(this);
+        this.timeframeOptionOverrider = this.timeframeOptionOverrider.bind(this);
 
         this.broadcast = (msg) => { this.server.rcon.broadcast(msg); };
         this.warn = (steamid, msg) => { this.server.rcon.warn(steamid, msg); };
@@ -137,7 +145,8 @@ export default class MapVote extends DiscordBasePlugin {
         this.verbose(1, 'Map vote was mounted.');
         this.verbose(1, "Blacklisted Layers/Levels: " + this.options.layerLevelBlacklist.join(', '))
         // await this.checkUpdates();
-        // console.log("mapvote removeEventListener", this.server)
+        this.timeframeOptionOverrider();
+        setInterval(this.timeframeOptionOverrider, 5 * 60 * 1000)
     }
 
     async unmount() {
@@ -165,6 +174,22 @@ export default class MapVote extends DiscordBasePlugin {
         await this.server.updatePlayerList();
         this.clearVote();
         this.updateNextMap();
+    }
+    async timeframeOptionOverrider() {
+        const timeNow = new Date(0, 0, 0, new Date().getHours(), new Date().getMinutes());
+        const activeTimeframes = this.or_options.timeframes.filter((tf) => tf.start);
+
+        console.log(activeTimeframes)
+
+        function tfFilter(tf) {
+            const tfStartSplit = tf.start.split(':').forEach((e, k, a) => a[ k ] = parseInt(e))
+            const tfEndSplit = tf.end.split(':').forEach((e, k, a) => a[ k ] = parseInt(e))
+
+            const tfStart = new Date(0, 0, 0, ...tfStartSplit)
+            const tfStart2 = new Date(0, 0, 0, 0, 0)
+            const tfEnd = new Date(0, 0, 0, ...tfEndSplit)
+            return (tfStart <= timeNow && timeNow < tfEnd) || (tfStart > tfEnd && tfStart2 <= timeNow && timeNow < tfEnd)
+        }
     }
     async checkUpdates(callback) {
         const versionN = "1.0.0"
