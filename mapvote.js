@@ -181,6 +181,7 @@ export default class MapVote extends DiscordBasePlugin {
 
         let logTimeframe = "Active Time Frames: ";
         let activeTfIds = [];
+        this.options = this.or_options;
         for (let atfK in activeTimeframes) {
             const atf = activeTimeframes[ atfK ];
             activeTfIds.push(atf.name || atf.id);
