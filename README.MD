@@ -113,10 +113,17 @@ false
 ```
 #### channelID
 ###### Description
-The ID of the channel to log votes to..
+The ID of the channel to log votes to.
 ###### Default
 ```json
 "112233445566778899"
+```
+#### timeFrames
+###### Description
+Array of timeframes that allows to override options based on local time. See example configuration
+###### Default
+```json
+[]
 ```
 ### Example configuration
 ```json
@@ -139,6 +146,7 @@ The ID of the channel to log votes to..
     "channelID": "112233445566778899",
     "timeFrames": [
         {
+            "name": "follow layer rotation list",
             "start": "12:00",
             "end": "18:00",
             "overrides": {
