@@ -137,7 +137,7 @@ The ID of the channel to log votes to..
     "voteBroadcastMessage": "✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!",
     "logToDiscord": true,
     "channelID": "112233445566778899",
-    "timeframes": [
+    "timeFrames": [
         {
             "start": "12:00",
             "end": "18:00",

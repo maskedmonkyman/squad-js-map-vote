@@ -177,7 +177,7 @@ export default class MapVote extends DiscordBasePlugin {
     }
     async timeframeOptionOverrider() {
         const timeNow = new Date(0, 0, 0, new Date().getHours(), new Date().getMinutes());
-        const activeTimeframes = this.or_options.timeframes.filter((tf) => tf.start);
+        const activeTimeframes = this.or_options.timeFrames.filter(tfFilter);
 
         console.log(activeTimeframes)
 
