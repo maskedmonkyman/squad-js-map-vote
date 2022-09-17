@@ -161,5 +161,5 @@ Array of timeframes that allows to override options based on local time. See exa
             }
         }
     ]
-}z
+}
 ```
