@@ -137,7 +137,6 @@ export default class MapVote extends DiscordBasePlugin {
     }
 
     async mount() {
-        this.options.gamemodeWhitelist.forEach((e, k, a) => a[ k ] = e.toUpperCase());
         this.server.on('NEW_GAME', this.onNewGame);
         this.server.on('CHAT_MESSAGE', this.onChatMessage);
         this.server.on('PLAYER_DISCONNECTED', this.onPlayerDisconnected);
@@ -465,6 +464,7 @@ export default class MapVote extends DiscordBasePlugin {
     //TODO: right now if version is set to "Any" no caf layers will be selected
     populateNominations(steamid = null, cmdLayers = [], bypassRaasFilter = false) //gets nomination strings from layer options
     {
+        this.options.gamemodeWhitelist.forEach((e, k, a) => a[ k ] = e.toUpperCase());
         // this.nominations.push(builtLayerString);
         // this.tallies.push(0);
 
