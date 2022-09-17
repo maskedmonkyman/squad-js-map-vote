@@ -182,8 +182,8 @@ export default class MapVote extends DiscordBasePlugin {
         console.log(activeTimeframes)
 
         function tfFilter(tf) {
-            const tfStartSplit = tf.start.split(':').forEach((e, k, a) => a[ k ] = parseInt(e))
-            const tfEndSplit = tf.end.split(':').forEach((e, k, a) => a[ k ] = parseInt(e))
+            const tfStartSplit = [parseInt(tf.start.split(':')[0]),parseInt(tf.start.split(':')[1])];
+            const tfEndSplit = [parseInt(tf.end.split(':')[0]),parseInt(tf.end.split(':')[1])];
 
             const tfStart = new Date(0, 0, 0, ...tfStartSplit)
             const tfStart2 = new Date(0, 0, 0, 0, 0)
