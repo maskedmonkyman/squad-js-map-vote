@@ -136,7 +136,7 @@ Array of timeframes that allows to override options based on local time. See exa
         automaticVoteStart: false,
         layerLevelBlacklist: [ "Anvil", "Chora" ]
     }
-},
+}
 ```
 ### Example configuration
 ```json
