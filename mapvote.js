@@ -175,7 +175,6 @@ export default class MapVote extends DiscordBasePlugin {
         this.updateNextMap();
     }
     async timeframeOptionOverrider() {
-        const timeNow = new Date(0, 0, 0, new Date().getHours(), new Date().getMinutes());
         const activeTimeframes = this.or_options.timeFrames.filter(tfFilter);
 
         let logTimeframe = "Active Time Frames: ";
@@ -184,13 +183,15 @@ export default class MapVote extends DiscordBasePlugin {
         for (let atfK in activeTimeframes) {
             const atf = activeTimeframes[ atfK ];
             activeTfIds.push(atf.name || atf.id);
-            for(let o in atf.overrides){
-                this.options[o] = atf.overrides[o];
+            for (let o in atf.overrides) {
+                this.options[ o ] = atf.overrides[ o ];
             }
         }
         this.verbose(1, logTimeframe + activeTfIds.join(', '));
 
         function tfFilter(tf, key, arr) {
+            const timeNow = tf.utcTime?new Date(0, 0, 0, new Date().getUTCHours(), new Date().getUTCMinutes()):new Date(0, 0, 0, new Date().getHours(), new Date().getMinutes());
+
             arr[ key ].id = key + 1;
             const tfStartSplit = [ parseInt(tf.start.split(':')[ 0 ]), parseInt(tf.start.split(':')[ 1 ]) ];
             const tfEndSplit = [ parseInt(tf.end.split(':')[ 0 ]), parseInt(tf.end.split(':')[ 1 ]) ];

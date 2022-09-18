@@ -125,6 +125,18 @@ Array of timeframes that allows to override options based on local time. See exa
 ```json
 []
 ```
+###### Timeframe format
+```javascript
+{
+    "name": "friendly name", // a friendly name visible in the logs
+    "start": "12:00", // timeframe start time <hour>:<minutes>
+    "end": "18:00", // timeframe end time <hour>:<minutes>
+    "utcTime": true, // true: use UTC time; false: use LOCAL time 
+    "overrides": {
+        "automaticVoteStart": false
+    }
+},
+```
 ### Example configuration
 ```json
 {
@@ -149,6 +161,7 @@ Array of timeframes that allows to override options based on local time. See exa
             "name": "follow layer rotation list",
             "start": "12:00",
             "end": "18:00",
+            "utcTime": true,
             "overrides": {
                 "automaticVoteStart": false
             }
@@ -156,6 +169,7 @@ Array of timeframes that allows to override options based on local time. See exa
         {
             "start": "22:00",
             "end": "02:00",
+            "utcTime": false,
             "overrides": {
                 "voteBroadcastMessage": "Late night games? Vote your favourite map!"
             }
