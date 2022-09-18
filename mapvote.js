@@ -179,7 +179,7 @@ export default class MapVote extends DiscordBasePlugin {
 
         let logTimeframe = "Active Time Frames: ";
         let activeTfIds = [];
-        this.options = this.or_options;
+        this.options = { ...this.or_options };
         for (let atfK in activeTimeframes) {
             const atf = activeTimeframes[ atfK ];
             activeTfIds.push(atf.name || atf.id);
@@ -190,7 +190,7 @@ export default class MapVote extends DiscordBasePlugin {
         this.verbose(1, logTimeframe + activeTfIds.join(', '));
 
         function tfFilter(tf, key, arr) {
-            const timeNow = tf.utcTime?new Date(0, 0, 0, new Date().getUTCHours(), new Date().getUTCMinutes()):new Date(0, 0, 0, new Date().getHours(), new Date().getMinutes());
+            const timeNow = tf.utcTime ? new Date(0, 0, 0, new Date().getUTCHours(), new Date().getUTCMinutes()) : new Date(0, 0, 0, new Date().getHours(), new Date().getMinutes());
 
             arr[ key ].id = key + 1;
             const tfStartSplit = [ parseInt(tf.start.split(':')[ 0 ]), parseInt(tf.start.split(':')[ 1 ]) ];
