@@ -131,7 +131,7 @@ Array of timeframes that allows to override options based on local time. See exa
     name: "friendly name", // a friendly name visible in the logs
     start: "12:00", // timeframe start time <hour>:<minutes>
     end: "18:00", // timeframe end time <hour>:<minutes>
-    utcTime: true, // true: use UTC time; false: use LOCAL time 
+    utcTime: false, // true: use UTC time; false: use LOCAL time 
     overrides: { // options to override
         automaticVoteStart: false,
         layerLevelBlacklist: [ "Anvil", "Chora" ]
