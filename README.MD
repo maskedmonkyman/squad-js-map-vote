@@ -128,12 +128,13 @@ Array of timeframes that allows to override options based on local time. See exa
 ###### Timeframe format
 ```javascript
 {
-    "name": "friendly name", // a friendly name visible in the logs
-    "start": "12:00", // timeframe start time <hour>:<minutes>
-    "end": "18:00", // timeframe end time <hour>:<minutes>
-    "utcTime": true, // true: use UTC time; false: use LOCAL time 
-    "overrides": {
-        "automaticVoteStart": false
+    name: "friendly name", // a friendly name visible in the logs
+    start: "12:00", // timeframe start time <hour>:<minutes>
+    end: "18:00", // timeframe end time <hour>:<minutes>
+    utcTime: true, // true: use UTC time; false: use LOCAL time 
+    overrides: { // options to override
+        automaticVoteStart: false,
+        layerLevelBlacklist: [ "Anvil", "Chora" ]
     }
 },
 ```
