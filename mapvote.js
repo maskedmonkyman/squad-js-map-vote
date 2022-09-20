@@ -177,8 +177,24 @@ export default class MapVote extends DiscordBasePlugin {
         this.updateNextMap();
     }
     async timeframeOptionOverrider() {
-
         const orOpt = { ...this.or_options };
+
+        let tfFilter = function (tf, key, arr) {
+            const utcDelay = tf.timezone ? parseFloat(tf.timezone) : 0;
+            const timeNow = new Date(0, 0, 0, new Date().getUTCHours() + utcDelay, new Date().getUTCMinutes());
+            this.verbose(1, `Current time (UTC+${utcDelay}) ${timeNow.getHours()}:${timeNow.getMinutes()}`)
+
+            const tfStartSplit = [ parseInt(tf.start.split(':')[ 0 ]), parseInt(tf.start.split(':')[ 1 ]) ];
+            const tfEndSplit = [ parseInt(tf.end.split(':')[ 0 ]), parseInt(tf.end.split(':')[ 1 ]) ];
+
+            const tfStart = new Date(0, 0, 0, ...tfStartSplit)
+            const tfStart2 = new Date(0, 0, 0, 0, 0)
+            const tfEnd = new Date(0, 0, 0, ...tfEndSplit)
+            const tfEnd2 = new Date(0, 0, 0, 24, 0)
+            return (tfStart <= timeNow && timeNow < tfEnd) || (tfStart > tfEnd && ((tfStart <= timeNow && timeNow < tfEnd2) || (tfStart2 <= timeNow && timeNow < tfEnd)))
+        }
+        tfFilter = tfFilter.bind(this);
+
         const activeTimeframes = orOpt.timeFrames.filter(tfFilter);
 
         let logTimeframe = "Active Time Frames: ";
@@ -192,22 +208,8 @@ export default class MapVote extends DiscordBasePlugin {
             }
         }
         this.verbose(1, logTimeframe + activeTfIds.join(', '));
-        const _verbose = this.verbose;
+        // this.verbose(1, `Current UTC time: ${timeNow.getHours()}:${timeNow.getMinutes()}`)
 
-        function tfFilter(tf, key, arr) {
-            const utcDelay = tf.timezone ? parseFloat(tf.timezone) : 0;
-            const timeNow = new Date(0, 0, 0, new Date().getUTCHours() + utcDelay, new Date().getUTCMinutes());
-            _verbose(1, `Current time (UTC+${utcDelay}) ${timeNow.getHours()}:${timeNow.getMinutes()}`)
-
-            const tfStartSplit = [ parseInt(tf.start.split(':')[ 0 ]), parseInt(tf.start.split(':')[ 1 ]) ];
-            const tfEndSplit = [ parseInt(tf.end.split(':')[ 0 ]), parseInt(tf.end.split(':')[ 1 ]) ];
-
-            const tfStart = new Date(0, 0, 0, ...tfStartSplit)
-            const midnight = new Date(0, 0, 0, 0, 0)
-            const tfEnd = new Date(0, 0, 0, ...tfEndSplit)
-            const tfEnd2 = new Date(0, 0, 0, ...tfEndSplit)
-            return (tfStart <= timeNow && timeNow < tfEnd) || (tfStart > tfEnd && ((tfStart <= timeNow && timeNow < midnight) || (midnight <= timeNow && timeNow < tfEnd)))
-        }
     }
     async checkUpdates(callback) {
         const versionN = "1.0.0"
