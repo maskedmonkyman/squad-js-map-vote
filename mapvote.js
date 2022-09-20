@@ -96,6 +96,11 @@ export default class MapVote extends DiscordBasePlugin {
                 default: '',
                 example: '112233445566778899'
             },
+            timezone: {
+                required: false,
+                description: "Timezone relative to UTC time. 0 for UTC, 2 for CEST (UTC+2), -1 (UTC-1) ",
+                default: 0
+            },
             timeFrames: {
                 required: false,
                 description: 'Array of timeframes to override options',
@@ -142,7 +147,10 @@ export default class MapVote extends DiscordBasePlugin {
         this.server.on('NEW_GAME', this.onNewGame);
         this.server.on('CHAT_MESSAGE', this.onChatMessage);
         this.server.on('PLAYER_DISCONNECTED', this.onPlayerDisconnected);
-        this.server.on('PLAYER_CONNECTED', () => { setTimeout(this.setSeedingMode, 5000) });
+        setTimeout(() => {
+            this.verbose(1, 'Enabled late listeners.');
+            this.server.on('PLAYER_CONNECTED', this.setSeedingMode);
+        }, 10 * 1000) // wait 10 seconds to be sure to have an updated player list
         this.verbose(1, 'Map vote was mounted.');
         this.verbose(1, "Blacklisted Layers/Levels: " + this.options.layerLevelBlacklist.join(', '))
         // await this.checkUpdates();
@@ -178,25 +186,11 @@ export default class MapVote extends DiscordBasePlugin {
     }
     async timeframeOptionOverrider() {
         const orOpt = { ...this.or_options };
-
-        let tfFilter = function (tf, key, arr) {
-            const utcDelay = tf.timezone ? parseFloat(tf.timezone) : 0;
-            const timeNow = new Date(0, 0, 0, new Date().getUTCHours() + utcDelay, new Date().getUTCMinutes());
-            this.verbose(1, `Current time (UTC+${utcDelay}) ${timeNow.getHours()}:${timeNow.getMinutes()}`)
-
-            const tfStartSplit = [ parseInt(tf.start.split(':')[ 0 ]), parseInt(tf.start.split(':')[ 1 ]) ];
-            const tfEndSplit = [ parseInt(tf.end.split(':')[ 0 ]), parseInt(tf.end.split(':')[ 1 ]) ];
-
-            const tfStart = new Date(0, 0, 0, ...tfStartSplit)
-            const tfStart2 = new Date(0, 0, 0, 0, 0)
-            const tfEnd = new Date(0, 0, 0, ...tfEndSplit)
-            const tfEnd2 = new Date(0, 0, 0, 24, 0)
-            return (tfStart <= timeNow && timeNow < tfEnd) || (tfStart > tfEnd && ((tfStart <= timeNow && timeNow < tfEnd2) || (tfStart2 <= timeNow && timeNow < tfEnd)))
-        }
-        tfFilter = tfFilter.bind(this);
-
+        const utcDelay = parseFloat(this.options.timezone);
+        const timeNow = new Date(0, 0, 0, new Date().getUTCHours() + utcDelay, new Date().getUTCMinutes());
+        this.verbose(1, `Current time (UTC+${utcDelay}) ${timeNow.toLocaleTimeString().split(':').splice(0, 2).join(':')}`)
+        
         const activeTimeframes = orOpt.timeFrames.filter(tfFilter);
-
         let logTimeframe = "Active Time Frames: ";
         let activeTfIds = [];
         this.options = { ...this.or_options };
@@ -208,8 +202,17 @@ export default class MapVote extends DiscordBasePlugin {
             }
         }
         this.verbose(1, logTimeframe + activeTfIds.join(', '));
-        // this.verbose(1, `Current UTC time: ${timeNow.getHours()}:${timeNow.getMinutes()}`)
 
+        function tfFilter(tf, key, arr) {
+            const tfStartSplit = [ parseInt(tf.start.split(':')[ 0 ]), parseInt(tf.start.split(':')[ 1 ]) ];
+            const tfEndSplit = [ parseInt(tf.end.split(':')[ 0 ]), parseInt(tf.end.split(':')[ 1 ]) ];
+
+            const tfStart = new Date(0, 0, 0, ...tfStartSplit)
+            const tfStart2 = new Date(0, 0, 0, 0, 0)
+            const tfEnd = new Date(0, 0, 0, ...tfEndSplit)
+            const tfEnd2 = new Date(0, 0, 0, 24, 0)
+            return (tfStart <= timeNow && timeNow < tfEnd) || (tfStart > tfEnd && ((tfStart <= timeNow && timeNow < tfEnd2) || (tfStart2 <= timeNow && timeNow < tfEnd)))
+        }
     }
     async checkUpdates(callback) {
         const versionN = "1.0.0"

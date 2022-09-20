@@ -118,6 +118,13 @@ The ID of the channel to log votes to.
 ```json
 "112233445566778899"
 ```
+#### timezone
+###### Description
+Timezone relative to UTC time. 0 for UTC, 2 for CEST (UTC+2), -1 (UTC-1) 
+###### Default
+```json
+0
+```
 #### timeFrames
 ###### Description
 Array of timeframes that allows to override options based on local time. See example configuration
@@ -131,7 +138,6 @@ Array of timeframes that allows to override options based on local time. See exa
     name: "friendly name", // a friendly name visible in the logs
     start: "12:00", // timeframe start time <hour>:<minutes>
     end: "18:00", // timeframe end time <hour>:<minutes>
-    timezone: 0, // Timezone relative to UTC time. 0 for UTC, 2 for CEST (UTC+2), -1 (UTC-1) 
     overrides: { // options to override
         automaticVoteStart: false,
         layerLevelBlacklist: [ "Anvil", "Chora" ]
@@ -157,12 +163,12 @@ Array of timeframes that allows to override options based on local time. See exa
     "voteBroadcastMessage": "✯ MAPVOTE ✯ Vote for the next map by writing in chat the corresponding number!",
     "logToDiscord": true,
     "channelID": "112233445566778899",
+    "timezone": 2,
     "timeFrames": [
         {
             "name": "follow layer rotation list",
             "start": "12:00",
             "end": "18:00",
-            "timezone": 2,
             "overrides": {
                 "automaticVoteStart": false
             }
@@ -170,7 +176,6 @@ Array of timeframes that allows to override options based on local time. See exa
         {
             "start": "22:00",
             "end": "02:00",
-            "timezone": -1,
             "overrides": {
                 "voteBroadcastMessage": "Late night games? Vote your favourite map!"
             }
