@@ -107,6 +107,8 @@ export default class MapVote extends DiscordBasePlugin {
     constructor(server, options, connectors) {
         super(server, options, connectors);
 
+        this.options.timeFrames.forEach((e, key, arr) => { arr[ key ].id = key + 1 });
+
         this.voteRules = {}; //data object holding vote configs
         this.nominations = []; //layer strings for the current vote choices
         this.trackedVotes = {}; //player votes, keyed by steam id
@@ -175,7 +177,9 @@ export default class MapVote extends DiscordBasePlugin {
         this.updateNextMap();
     }
     async timeframeOptionOverrider() {
-        const activeTimeframes = this.or_options.timeFrames.filter(tfFilter);
+
+        const orOpt = { ...this.or_options };
+        const activeTimeframes = orOpt.timeFrames.filter(tfFilter);
 
         let logTimeframe = "Active Time Frames: ";
         let activeTfIds = [];
@@ -190,16 +194,17 @@ export default class MapVote extends DiscordBasePlugin {
         this.verbose(1, logTimeframe + activeTfIds.join(', '));
 
         function tfFilter(tf, key, arr) {
-            const timeNow = tf.utcTime ? new Date(0, 0, 0, new Date().getUTCHours(), new Date().getUTCMinutes()) : new Date(0, 0, 0, new Date().getHours(), new Date().getMinutes());
+            const utcDelay = tf.timezone ? parseFloat(tf.timezone) : 0;
+            const timeNow = new Date(0, 0, 0, new Date().getUTCHours() + utcDelay, new Date().getUTCMinutes());
+            this.verbose(1, `Current time (UTC+${utcDelay}) ${timeNow.getHours()}:${timeNow.getMinutes()}`)
 
-            arr[ key ].id = key + 1;
             const tfStartSplit = [ parseInt(tf.start.split(':')[ 0 ]), parseInt(tf.start.split(':')[ 1 ]) ];
             const tfEndSplit = [ parseInt(tf.end.split(':')[ 0 ]), parseInt(tf.end.split(':')[ 1 ]) ];
 
             const tfStart = new Date(0, 0, 0, ...tfStartSplit)
             const tfStart2 = new Date(0, 0, 0, 0, 0)
             const tfEnd = new Date(0, 0, 0, ...tfEndSplit)
-            return (tfStart <= timeNow && timeNow < tfEnd) || (tfStart > tfEnd && tfStart2 <= timeNow && timeNow < tfEnd)
+            return (tfStart <= timeNow && timeNow < tfEnd) || (tfStart > tfEnd && ((tfStart <= timeNow || tfStart2 <= timeNow) && timeNow < tfEnd))
         }
     }
     async checkUpdates(callback) {
