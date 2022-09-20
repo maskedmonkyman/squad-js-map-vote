@@ -205,7 +205,7 @@ export default class MapVote extends DiscordBasePlugin {
             const midnight = new Date(0, 0, 0, 0, 0)
             const tfEnd = new Date(0, 0, 0, ...tfEndSplit)
             const tfEnd2 = new Date(0, 0, 0, ...tfEndSplit)
-            return (tfStart <= timeNow && timeNow < tfEnd) || (tfStart > tfEnd && ((tfStart <= timeNow && timeNow < midnight) || (midnight <= timeNow && timeNow < tfEnd))
+            return (tfStart <= timeNow && timeNow < tfEnd) || (tfStart > tfEnd && ((tfStart <= timeNow && timeNow < midnight) || (midnight <= timeNow && timeNow < tfEnd)))
         }
     }
     async checkUpdates(callback) {
