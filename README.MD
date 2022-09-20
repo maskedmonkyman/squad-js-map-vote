@@ -162,7 +162,7 @@ Array of timeframes that allows to override options based on local time. See exa
             "name": "follow layer rotation list",
             "start": "12:00",
             "end": "18:00",
-            "timezone": +2,
+            "timezone": 2,
             "overrides": {
                 "automaticVoteStart": false
             }
